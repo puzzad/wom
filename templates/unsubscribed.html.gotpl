@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title>Puzzad: mailing list removal</title>
+
+    <!--[if gte mso 9]>
+    <xml>
+        <o:OfficeDocumentSettings>
+            <o:AllowPNG/>
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+        </o:OfficeDocumentSettings>
+    </xml>
+    <![endif]-->
+
+    <style>
+
+        :root {
+          color-scheme: light;
+          supported-color-schemes: light;
+        }
+
+        html,
+        body {
+            margin: 0 auto !important;
+            padding: 0 !important;
+            height: 100% !important;
+            width: 100% !important;
+        }
+
+        * {
+            -ms-text-size-adjust: 100%;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        div[style*="margin: 16px 0"] {
+            margin: 0 !important;
+        }
+
+        #MessageViewBody, #MessageWebViewDiv{
+            width: 100% !important;
+        }
+
+        table,
+        td {
+            mso-table-lspace: 0pt !important;
+            mso-table-rspace: 0pt !important;
+        }
+
+        table {
+            border-spacing: 0 !important;
+            border-collapse: collapse !important;
+            table-layout: fixed !important;
+            margin: 0 auto !important;
+        }
+
+        img {
+            -ms-interpolation-mode:bicubic;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        a[x-apple-data-detectors],
+        .unstyle-auto-detected-links a,
+        .aBn {
+            border-bottom: 0 !important;
+            cursor: default !important;
+            color: inherit !important;
+            text-decoration: none !important;
+            font-size: inherit !important;
+            font-family: inherit !important;
+            font-weight: inherit !important;
+            line-height: inherit !important;
+        }
+
+        .a6S {
+            display: none !important;
+            opacity: 0.01 !important;
+        }
+
+        .im {
+            color: inherit !important;
+        }
+
+        img.g-img + div {
+            display: none !important;
+        }
+
+        @media only screen and (min-device-width: 320px) and (max-device-width: 374px) {
+            u ~ div .email-container {
+                min-width: 320px !important;
+            }
+        }
+
+        @media only screen and (min-device-width: 375px) and (max-device-width: 413px) {
+            u ~ div .email-container {
+                min-width: 375px !important;
+            }
+        }
+
+        @media only screen and (min-device-width: 414px) {
+            u ~ div .email-container {
+                min-width: 414px !important;
+            }
+        }
+
+    </style>
+
+    <style>
+
+	    .button-td,
+	    .button-a {
+	        transition: all 100ms ease-in;
+	    }
+	    .button-td-primary:hover,
+	    .button-a-primary:hover {
+	        background: #555555 !important;
+	        border-color: #555555 !important;
+	    }
+
+	    @media screen and (max-width: 600px) {
+
+	        .email-container p {
+	            font-size: 17px !important;
+	        }
+
+	    }
+
+    </style>
+
+</head>
+<body width="100%" style="margin: 0; padding: 0 !important; mso-line-height-rule: exactly; background-color: #222222;">
+	<center role="article" aria-roledescription="email" lang="en" style="width: 100%; background-color: #222222;">
+    <!--[if mso | IE]>
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #222222;">
+    <tr>
+    <td>
+    <![endif]-->
+        <div style="max-width: 600px; margin: 0 auto;" class="email-container">
+            <!--[if mso]>
+            <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" width="600">
+            <tr>
+            <td>
+            <![endif]-->
+
+	        <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: auto;">
+	            <tr>
+	                <td style="padding: 20px 0 0 0; text-align: left">
+	                    <img src="data:image/png;base64,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" width="200" height="50" alt="Puzzad" border="0" style="height: auto; font-family: sans-serif; font-size: 15px; line-height: 15px; color: #555555;">
+	                </td>
+	            </tr>
+
+                <tr>
+                    <td style="background-color: #ffffff;">
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                                <td style="padding: 20px; font-family: sans-serif; font-size: 15px; line-height: 20px; color: #555555;">
+                                    <h1 style="margin: 0 0 10px 0; font-family: sans-serif; font-size: 25px; line-height: 30px; color: #333333; font-weight: normal;">Your subscription has been removed</h1>
+                                    <p>Hello,</p>
+                                    <p>This is to inform you that you have been removed from the Puzzad.com mailing
+                                    list and will no longer receive announcements from us.
+                                    </p>
+                                    <p>
+                                        In case this was in error, you can resubscribe below:
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 0 20px;">
+                                    <!-- Button : BEGIN -->
+                                    <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: auto;">
+                                        <tr>
+                                            <td class="button-td button-td-primary" style="border-radius: 4px; background: #222222;">
+											     <a class="button-a button-a-primary" href="{{.Link}}" style="background: #222222; border: 1px solid #000000; font-family: sans-serif; font-size: 15px; line-height: 15px; text-decoration: none; padding: 13px 17px; color: #ffffff; display: block; border-radius: 4px;">Restore my subscription</a>
+											</td>
+                                        </tr>
+                                    </table>
+                                    <!-- Button : END -->
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 20px; font-family: sans-serif; font-size: 15px; line-height: 20px; color: #555555;">
+                                    <p>Either way, thanks for listening to us!</p>
+                                    <p>Happy adventuring,</p>
+                                    <p>The Puzzad team</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+            </table>
+
+	        <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: auto;">
+                <tr>
+                    <td style="padding: 20px; font-family: sans-serif; font-size: 12px; line-height: 15px; text-align: center; color: #ffffff;">
+                        Puzzad is a trading name of Lunarian Ltd, a company registered in England and
+                        Wales. Registration number: 11937813. Address: International House, 24 Holborn
+                        Viaduct, City of London, EC1A 2BN.
+                    </td>
+                </tr>
+            </table>
+
+            <!--[if mso]>
+            </td>
+            </tr>
+            </table>
+            <![endif]-->
+        </div>
+
+    <!--[if mso | IE]>
+    </td>
+    </tr>
+    </table>
+    <![endif]-->
+    </center>
+</body>
+</html>
