@@ -51,7 +51,7 @@ func createSubscriptionJwt(email string) (string, error) {
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 		NotBefore: jwt.NewNumericDate(time.Now()),
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
-	}).SignedString(*subscriptionSecret)
+	}).SignedString([]byte(*subscriptionSecret))
 }
 
 func createUnsubscribeJwt(email string) (string, error) {
@@ -59,7 +59,7 @@ func createUnsubscribeJwt(email string) (string, error) {
 		Issuer:   "wom",
 		Subject:  fmt.Sprintf("unsubscribe:%s", email),
 		IssuedAt: jwt.NewNumericDate(time.Now()),
-	}).SignedString(*subscriptionSecret)
+	}).SignedString([]byte(*subscriptionSecret))
 }
 
 func validateSubscriptionJwt(kind, token string) (string, error) {
