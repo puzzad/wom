@@ -20,6 +20,8 @@ var (
 
 	subscriptionConfirmLink     = flag.String("subscription-confirm-link", "", "Link to send users to confirm their subscription to the mailing list")
 	subscriptionUnsubscribeLink = flag.String("subscription-unsubscribe-link", "", "Link to send users to unsubscribe from the mailing list")
+
+	contactEmail = flag.String("contact-email", "", "Email address to send contact form emails to")
 )
 
 func sendSubscriptionOptInMail(ctx context.Context, email string) error {
@@ -55,7 +57,19 @@ func sendSubscriptionEndedMail(ctx context.Context, email string) error {
 	})
 }
 
+func SendContactFormMail(ctx context.Context, email, name, message string) error {
+	return sendMailWithReplyTo(ctx, *contactEmail, "Puzzad: Contact form", "contact", email, map[string]string{
+		"Name":    name,
+		"Email":   email,
+		"Message": message,
+	})
+}
+
 func sendMail(ctx context.Context, address, subject, template string, data any) error {
+	return sendMailWithReplyTo(ctx, address, subject, template, "", data)
+}
+
+func sendMailWithReplyTo(ctx context.Context, address, subject, template, replyTo string, data any) error {
 	mg := mailgun.NewMailgun(*mailDomain, *apiKey)
 	mg.SetAPIBase(*apiBase)
 
@@ -80,6 +94,9 @@ func sendMail(ctx context.Context, address, subject, template string, data any) 
 	}
 
 	message := mg.NewMessage(*mailSender, subject, twr.String(), address)
+	if replyTo != "" {
+		message.SetReplyTo(replyTo)
+	}
 	message.SetHtml(hwr.String())
 	_, _, err = mg.Send(ctx, message)
 	return err

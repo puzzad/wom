@@ -34,6 +34,7 @@ func main() {
 	r.Post("/mail/subscribe", wom.SubscribeToMailingList)
 	r.Post("/mail/confirm", wom.ConfirmMailingListSubscription)
 	r.Post("/mail/unsubscribe", wom.UnsubscribeFromMailingList)
+	r.Post("/mail/contact", wom.SendContactForm)
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)

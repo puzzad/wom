@@ -1,6 +1,7 @@
 package wom
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -123,6 +124,47 @@ func UnsubscribeFromMailingList(w http.ResponseWriter, r *http.Request) {
 	if err := sendSubscriptionEndedMail(r.Context(), email); err != nil {
 		log.Printf("Unable to send email: %v", err)
 		render.Render(w, r, ErrInternalError(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func SendContactForm(w http.ResponseWriter, r *http.Request) {
+	type req struct {
+		Token   string
+		Name    string
+		Email   string
+		Message string
+	}
+	var data = req{}
+	if err := render.DecodeJSON(r.Body, &data); err != nil {
+		_ = render.Render(w, r, ErrInvalidRequest(err))
+		return
+	}
+	if strings.TrimSpace(data.Name) == "" {
+		_ = render.Render(w, r, ErrInvalidRequest(errors.New("name is required")))
+		return
+	}
+	if strings.TrimSpace(data.Message) == "" {
+		_ = render.Render(w, r, ErrInvalidRequest(errors.New("message is required")))
+		return
+	}
+
+	if data.Email != getEmailFromJwt(r) {
+		if err := checkCaptcha(data.Token); err != nil {
+			log.Printf("%s", err.Error())
+			_ = render.Render(w, r, ErrInvalidRequest(err))
+			return
+		}
+		if !validEmail(data.Email) {
+			_ = render.Render(w, r, ErrInvalidRequest(errors.New("invalid email")))
+			return
+		}
+	}
+
+	if err := SendContactFormMail(r.Context(), data.Email, data.Name, data.Message); err != nil {
+		_ = render.Render(w, r, ErrInvalidRequest(err))
 		return
 	}
 
