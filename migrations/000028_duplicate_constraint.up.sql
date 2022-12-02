@@ -1,0 +1,1 @@
+ALTER TABLE public.adventures DROP CONSTRAINT IF EXISTS "adventures_name_key";

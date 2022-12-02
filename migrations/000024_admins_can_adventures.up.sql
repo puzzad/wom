@@ -1,0 +1,1 @@
+CREATE POLICY "Read access to all adventures to admins" ON "public"."adventures" FOR SELECT USING (auth.checkadmin(auth.jwt()));
