@@ -5,8 +5,11 @@ import (
 	"embed"
 	"errors"
 	"flag"
+	"fmt"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"log"
+	"strconv"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -43,7 +46,19 @@ func removeEmailFromMailingList(ctx context.Context, email string) error {
 }
 
 func EnsureMigrations() error {
-	_, err := pool.Exec(context.Background(), "CREATE SCHEMA IF NOT EXISTS supabase_migrations")
+	err := checkIntMigration("storage", "SELECT MAX(id) as MaxVersion FROM storage.migrations", 10)
+	if err != nil {
+		return err
+	}
+	err = checkIntMigration("realtime", "select max(version) as MaxVersion from realtime.schema_migrations", 20220712093339)
+	if err != nil {
+		return err
+	}
+	err = checkStringMigration("auth", "select max(version) as MaxVersion from auth.schema_migrations", "20221114143410")
+	if err != nil {
+		return err
+	}
+	_, err = pool.Exec(context.Background(), "CREATE SCHEMA IF NOT EXISTS supabase_migrations")
 	if err != nil {
 		return err
 	}
@@ -67,6 +82,44 @@ func EnsureMigrations() error {
 	log.Printf("DB Version: %d (%t).", version, dirty)
 	if dirty {
 		return errors.New("database is dirty")
+	}
+	return nil
+}
+
+func checkIntMigration(name, sql string, max int) error {
+	var maxVersion int
+	for maxVersion < max {
+		row := pool.QueryRow(context.Background(), sql)
+		err := row.Scan(&maxVersion)
+		if err != nil {
+			return fmt.Errorf("error checking %s migrations", name)
+		}
+		if maxVersion < max {
+			log.Printf("Waiting for %s migration", name)
+			time.Sleep(1 * time.Second)
+		}
+	}
+	return nil
+}
+
+func checkStringMigration(name, sql string, max string) error {
+	maxInt, _ := strconv.Atoi(max)
+	var maxVersion int
+	for maxVersion < maxInt {
+		var result string
+		row := pool.QueryRow(context.Background(), sql)
+		err := row.Scan(&result)
+		if err != nil {
+			return fmt.Errorf("error checking %s migrations", name)
+		}
+		maxVersion, err = strconv.Atoi(result)
+		if err != nil {
+			return fmt.Errorf("error checking %s migrations", name)
+		}
+		if maxVersion < maxInt {
+			log.Printf("Waiting for %s migration", name)
+			time.Sleep(1 * time.Second)
+		}
 	}
 	return nil
 }
