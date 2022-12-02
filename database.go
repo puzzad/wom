@@ -60,6 +60,14 @@ func EnsureMigrations() error {
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
+	version, dirty, err := m.Version()
+	if err != nil {
+		return err
+	}
+	log.Printf("DB Version: %d (%t).", version, dirty)
+	if dirty {
+		return errors.New("database is dirty")
+	}
 	return nil
 }
 
