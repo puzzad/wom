@@ -28,6 +28,10 @@ func main() {
 		log.Fatalf("Unable to connect to database: %v", err)
 	}
 
+	if err := wom.EnsureMigrations(); err != nil {
+		log.Fatalf("Unable to perform database migrations: %v", err)
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(render.SetContentType(render.ContentTypeJSON))
@@ -60,4 +64,5 @@ func main() {
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("Server Shutdown Failed:%+v", err)
 	}
+	wom.CloseDatabase()
 }
