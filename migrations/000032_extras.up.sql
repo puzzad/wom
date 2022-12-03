@@ -10,3 +10,8 @@ CREATE TABLE IF NOT EXISTS public.extras
     description varchar,
     sort        int
 );
+
+ALTER TABLE public.extras ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Read access to extras for everyone" ON "public"."extras";
+CREATE POLICY "Read access to extras for everyone" ON "public"."extras" FOR SELECT USING (true);
