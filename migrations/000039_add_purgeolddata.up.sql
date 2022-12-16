@@ -41,3 +41,4 @@ BEGIN
 END
 $$;
 ALTER FUNCTION "internal"."purgeolddata"() OWNER TO "postgres";
+SELECT cron.schedule('purgeolddata', '0 3 * * *', 'SELECT "internal"."purgeolddata"()');
