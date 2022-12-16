@@ -28,4 +28,3 @@ CREATE OR REPLACE TRIGGER "announce_user_delete"
     ON "auth"."users"
     FOR EACH ROW
 EXECUTE FUNCTION "internal"."announce_user_delete"();
-SELECT "internal"."purgeolddata"();
