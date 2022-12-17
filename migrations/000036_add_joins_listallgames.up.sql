@@ -1,5 +1,4 @@
-DROP FUNCTION "public"."listallgames";
-CREATE FUNCTION "public"."listallgames"(jwt TEXT)
+CREATE OR REPLACE  FUNCTION "public"."listallgames"(jwt TEXT)
     RETURNS TABLE
             (
                 "id"            BIGINT,
