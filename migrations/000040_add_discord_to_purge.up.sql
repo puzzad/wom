@@ -1,3 +1,4 @@
+DROP FUNCTION IF EXISTS "internal"."announce_game_delete";
 CREATE OR REPLACE FUNCTION "internal"."announce_game_delete"() RETURNS TRIGGER
     LANGUAGE "plpgsql"
     SECURITY DEFINER AS
@@ -13,6 +14,7 @@ CREATE OR REPLACE TRIGGER "announce_game_delete"
     ON "public"."games"
     FOR EACH ROW
 EXECUTE FUNCTION "internal"."announce_game_delete"();
+DROP FUNCTION IF EXISTS "internal"."announce_user_delete";
 CREATE OR REPLACE FUNCTION "internal"."announce_user_delete"() RETURNS TRIGGER
     LANGUAGE "plpgsql"
     SECURITY DEFINER AS
@@ -23,6 +25,7 @@ BEGIN
 END
 $$;
 ALTER FUNCTION "internal"."announce_user_delete"() OWNER TO "postgres";
+DROP FUNCTION IF EXISTS "announce_user_delete";
 CREATE OR REPLACE TRIGGER "announce_user_delete"
     AFTER DELETE
     ON "auth"."users"

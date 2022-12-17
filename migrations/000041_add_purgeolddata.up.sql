@@ -7,6 +7,7 @@ ALTER TABLE guesses
 ALTER TABLE internal.usedhints
     DROP CONSTRAINT IF EXISTS usedhints_game_fkey,
     ADD CONSTRAINT usedhints_game_fkey FOREIGN KEY (game) REFERENCES games (code) ON DELETE CASCADE;
+DROP FUNCTION IF EXISTS "internal"."purgeolddata";
 CREATE OR REPLACE FUNCTION "internal"."purgeolddata"()
     RETURNS TABLE
             (

@@ -1,3 +1,4 @@
+DROP FUNCTION IF EXISTS "public"."listallgames";
 CREATE OR REPLACE FUNCTION "public"."listallgames"(jwt TEXT)
     RETURNS TABLE
             (

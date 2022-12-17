@@ -1,5 +1,5 @@
 DROP FUNCTION "public"."listallgames";
-CREATE FUNCTION "public"."listallgames"()
+CREATE OR REPLACE FUNCTION "public"."listallgames"()
     RETURNS TABLE
             (
                 "id"            BIGINT,

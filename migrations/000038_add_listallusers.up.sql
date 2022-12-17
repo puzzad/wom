@@ -1,4 +1,4 @@
-DROP FUNCTION "public"."listallusers";
+DROP FUNCTION IF EXISTS "public"."listallusers";
 CREATE FUNCTION "public"."listallusers"()
     RETURNS TABLE
             (
