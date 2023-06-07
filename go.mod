@@ -9,7 +9,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang-migrate/migrate/v4 v4.16.1
 	github.com/jackc/pgx/v5 v5.3.1
-	github.com/mailgun/mailgun-go/v4 v4.8.2
+	github.com/mailgun/mailgun-go/v4 v4.9.0
 )
 
 require (
