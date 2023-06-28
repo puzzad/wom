@@ -152,7 +152,7 @@ func SendContactForm(c echo.Context) error {
 	}
 	user, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
 	userEmail := ""
-	if user != nil {
+	if user != nil && user.Verified() {
 		userEmail = user.Email()
 	}
 	if data.Email != userEmail {
