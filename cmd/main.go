@@ -104,6 +104,9 @@ func startAdventure(app *pocketbase.PocketBase) func(echo.Context) error {
 		if user == nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "User not found"})
 		}
+		if !user.Verified() {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email must be verified"})
+		}
 		acaGen, err := aca.NewGenerator("-", rand.NewSource(time.Now().UnixNano()))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to generate ACA"})
