@@ -53,10 +53,6 @@ func main() {
 		}
 		return e.App.Dao().SaveAdmin(admin)
 	})
-	app.OnRecordAuthRequest().Add(func(e *core.RecordAuthEvent) error {
-		//Kick out unverified people
-		return fmt.Errorf("No")
-	})
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 		_, err := e.Router.AddRoute(echo.Route{
 			Name:    "start adventure",
