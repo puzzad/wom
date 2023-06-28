@@ -15,7 +15,7 @@ func init() {
 			{
 				"id": "_pb_users_auth_",
 				"created": "2023-06-26 19:27:36.595Z",
-				"updated": "2023-06-26 20:12:41.452Z",
+				"updated": "2023-06-28 19:45:31.389Z",
 				"name": "users",
 				"type": "auth",
 				"system": false,
@@ -53,6 +53,21 @@ func init() {
 							"thumbs": null,
 							"protected": false
 						}
+					},
+					{
+						"system": false,
+						"id": "voyvxiet",
+						"name": "games",
+						"type": "relation",
+						"required": false,
+						"unique": false,
+						"options": {
+							"collectionId": "410a6wyrxhi89cg",
+							"cascadeDelete": false,
+							"minSelect": null,
+							"maxSelect": null,
+							"displayFields": []
+						}
 					}
 				],
 				"indexes": [],
@@ -69,13 +84,13 @@ func init() {
 					"manageRule": null,
 					"minPasswordLength": 8,
 					"onlyEmailDomains": null,
-					"requireEmail": false
+					"requireEmail": true
 				}
 			},
 			{
 				"id": "8480lghxmlrhtn6",
 				"created": "2023-06-26 19:53:11.369Z",
-				"updated": "2023-06-27 21:54:21.551Z",
+				"updated": "2023-06-28 14:03:57.090Z",
 				"name": "hints",
 				"type": "base",
 				"system": false,
@@ -145,7 +160,7 @@ func init() {
 			{
 				"id": "mlrnksy9yxm2dmv",
 				"created": "2023-06-26 19:53:51.292Z",
-				"updated": "2023-06-26 19:53:51.292Z",
+				"updated": "2023-06-28 14:03:57.090Z",
 				"name": "mailinglist",
 				"type": "base",
 				"system": false,
@@ -187,7 +202,7 @@ func init() {
 			{
 				"id": "t6dabzlosjg7sdb",
 				"created": "2023-06-26 19:54:33.247Z",
-				"updated": "2023-06-27 21:55:31.865Z",
+				"updated": "2023-06-28 14:03:57.091Z",
 				"name": "usedhints",
 				"type": "base",
 				"system": false,
@@ -246,7 +261,7 @@ func init() {
 			{
 				"id": "dsyy96h6bthpiev",
 				"created": "2023-06-26 19:55:28.099Z",
-				"updated": "2023-06-28 12:05:22.256Z",
+				"updated": "2023-06-28 14:03:57.091Z",
 				"name": "adventures",
 				"type": "base",
 				"system": false,
@@ -360,7 +375,7 @@ func init() {
 			{
 				"id": "410a6wyrxhi89cg",
 				"created": "2023-06-26 19:57:50.207Z",
-				"updated": "2023-06-27 19:36:35.860Z",
+				"updated": "2023-06-28 20:22:58.750Z",
 				"name": "games",
 				"type": "base",
 				"system": false,
@@ -465,7 +480,7 @@ func init() {
 					}
 				],
 				"indexes": [],
-				"listRule": "@request.auth.id = user.id",
+				"listRule": "@request.auth.games.id ?= id || @request.auth.id = user.id",
 				"viewRule": null,
 				"createRule": null,
 				"updateRule": null,
@@ -475,7 +490,7 @@ func init() {
 			{
 				"id": "pcfz1rdnine760h",
 				"created": "2023-06-26 19:58:21.418Z",
-				"updated": "2023-06-27 21:53:44.962Z",
+				"updated": "2023-06-28 14:03:57.091Z",
 				"name": "guesses",
 				"type": "base",
 				"system": false,
@@ -544,7 +559,7 @@ func init() {
 			{
 				"id": "k5593ds7n07c487",
 				"created": "2023-06-26 19:58:51.790Z",
-				"updated": "2023-06-27 21:56:32.330Z",
+				"updated": "2023-06-28 14:03:57.091Z",
 				"name": "puzzles",
 				"type": "base",
 				"system": false,
