@@ -1,1 +1,0 @@
-ALTER TABLE "internal"."secrets" REPLICA IDENTITY full;
