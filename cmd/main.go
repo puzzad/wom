@@ -14,6 +14,7 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
+	"github.com/puzzad/wom"
 	_ "github.com/puzzad/wom/migrations"
 	"log"
 	"math/rand"
@@ -52,6 +53,10 @@ func main() {
 		}
 		return e.App.Dao().SaveAdmin(admin)
 	})
+	app.OnRecordAuthRequest().Add(func(e *core.RecordAuthEvent) error {
+		//Kick out unverified people
+		return fmt.Errorf("No")
+	})
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 		_, err := e.Router.AddRoute(echo.Route{
 			Name:    "start adventure",
@@ -62,6 +67,12 @@ func main() {
 		if err != nil {
 			return err
 		}
+		_, err = e.Router.AddRoute(echo.Route{
+			Name:    "send contact form",
+			Path:    "/mail/contact",
+			Method:  http.MethodPost,
+			Handler: wom.SendContactForm,
+		})
 		//e.Router.Add(http.MethodGet, "/mail/subscribe", wom.SubscribeToMailingList)
 		//e.Router.Add(http.MethodGet, "/mail/confirm", wom.ConfirmMailingListSubscription)
 		//e.Router.Add(http.MethodGet, "/mail/unsubscribe", wom.UnsubscribeFromMailingList)

@@ -3,6 +3,9 @@ package wom
 import (
 	"errors"
 	"fmt"
+	"github.com/labstack/echo/v5"
+	"github.com/pocketbase/pocketbase/apis"
+	"github.com/pocketbase/pocketbase/models"
 	"log"
 	"net/http"
 	"net/mail"
@@ -130,7 +133,7 @@ func UnsubscribeFromMailingList(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func SendContactForm(w http.ResponseWriter, r *http.Request) {
+func SendContactForm(c echo.Context) error {
 	type req struct {
 		Token   string
 		Name    string
@@ -138,37 +141,35 @@ func SendContactForm(w http.ResponseWriter, r *http.Request) {
 		Message string
 	}
 	var data = req{}
-	if err := render.DecodeJSON(r.Body, &data); err != nil {
-		_ = render.Render(w, r, ErrInvalidRequest(err))
-		return
+	if err := render.DecodeJSON(c.Request().Body, &data); err != nil {
+		return c.JSON(http.StatusBadRequest, ErrInvalidRequest(err))
 	}
 	if strings.TrimSpace(data.Name) == "" {
-		_ = render.Render(w, r, ErrInvalidRequest(errors.New("name is required")))
-		return
+		return c.JSON(http.StatusBadRequest, ErrInvalidRequest(errors.New("name is required")))
 	}
 	if strings.TrimSpace(data.Message) == "" {
-		_ = render.Render(w, r, ErrInvalidRequest(errors.New("message is required")))
-		return
+		return c.JSON(http.StatusBadRequest, ErrInvalidRequest(errors.New("message is required")))
 	}
-
-	if data.Email != getEmailFromJwt(r) {
+	user, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
+	userEmail := ""
+	if user != nil {
+		userEmail = user.Email()
+	}
+	if data.Email != userEmail {
 		if err := checkCaptcha(data.Token); err != nil {
 			log.Printf("%s", err.Error())
-			_ = render.Render(w, r, ErrInvalidRequest(err))
-			return
+			return c.JSON(http.StatusBadRequest, ErrInvalidRequest(err))
 		}
 		if !validEmail(data.Email) {
-			_ = render.Render(w, r, ErrInvalidRequest(errors.New("invalid email")))
-			return
+			return c.JSON(http.StatusBadRequest, ErrInvalidRequest(errors.New("invalid email")))
 		}
 	}
 
-	if err := SendContactFormMail(r.Context(), data.Email, data.Name, data.Message); err != nil {
-		_ = render.Render(w, r, ErrInvalidRequest(err))
-		return
+	if err := SendContactFormMail(c.Request().Context(), data.Email, data.Name, data.Message); err != nil {
+		return c.JSON(http.StatusBadRequest, ErrInvalidRequest(err))
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	return c.String(http.StatusNoContent, "")
 }
 
 func validEmail(email string) bool {
