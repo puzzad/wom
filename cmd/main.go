@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/csmith/aca"
@@ -27,6 +29,8 @@ var port = flag.Int("port", 3000, "Port to listen for HTTP requests")
 var initialAdminEmail = flag.String("au", "pocketbase@greg.holmes.name", "")
 var initialAdminPassword = flag.String("ap", "password", "")
 var dataDir = flag.String("dir", "./data", "")
+
+var webHookURL = flag.String("webhook-url", "", "Webhook to send events to {'content': 'message'}")
 
 func main() {
 	envflag.Parse()
@@ -88,10 +92,24 @@ func main() {
 	app.OnRecordBeforeCreateRequest("adventures").Add(func(e *core.RecordCreateEvent) error {
 		return preserveOriginalFilenames(e.UploadedFiles, nil)
 	})
-	app.OnRecordBeforeCreateRequest().Add(func(e *core.RecordCreateEvent) error {
-		//Check guesses
-		if e.Collection.Name == "guesses" {
-			e.Record.Set("correct", checkGuess(app, e.Record))
+	app.OnRecordBeforeCreateRequest("guesses").Add(func(e *core.RecordCreateEvent) error {
+		e.Record.Set("correct", checkGuess(app, e.Record))
+		return nil
+	})
+	app.OnRecordAfterCreateRequest("guesses").Add(func(e *core.RecordCreateEvent) error {
+		var code, title string
+		err := app.Dao().DB().Select("games.code as code", "puzzles.title as title").
+			From("guesses").
+			InnerJoin("games", dbx.NewExp("games.id=guesses.game")).
+			InnerJoin("puzzles", dbx.NewExp("puzzles.id=guesses.puzzle")).
+			Where(dbx.HashExp{"guesses.id": e.Record.Id}).
+			Row(&code, &title)
+		if err == nil {
+			if e.Record.Get("correct").(bool) {
+				sendWebhook(fmt.Sprintf(":tada: %s/%s: %s", code, title, e.Record.Get("content")))
+			} else {
+				sendWebhook(fmt.Sprintf(":x: %s/%s: %s", code, title, e.Record.Get("content")))
+			}
 		}
 		return nil
 	})
@@ -100,16 +118,40 @@ func main() {
 	}
 }
 
+func sendWebhook(message string) {
+	type webhook struct {
+		Content string `json:"content"`
+	}
+	if len(*webHookURL) == 0 {
+		return
+	}
+	data := &webhook{
+		Content: message,
+	}
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return
+	}
+	_, err = http.Post(*webHookURL, "application/json", bytes.NewReader(dataBytes))
+	if err != nil {
+		return
+	}
+}
+
 func checkGuess(app *pocketbase.PocketBase, r *models.Record) bool {
 	content := r.Get("content")
 	puzzle := r.Get("puzzle")
 	game := r.Get("game")
-	records, err := app.Dao().FindRecordsByExpr("answers", dbx.HashExp{
-		"game":   game,
-		"puzzle": puzzle,
-		"answer": content,
-	})
-	return err == nil || len(records) > 0
+	var count string
+	err := app.Dao().DB().Select("count(*)").From("answers").
+		AndWhere(dbx.HashExp{"puzzle": puzzle}).
+		AndWhere(dbx.HashExp{"game": game}).
+		AndWhere(dbx.HashExp{"answer": content}).
+		Row(&count)
+	if err != nil {
+		return false
+	}
+	return count == "1"
 }
 
 func startGame(app *pocketbase.PocketBase) func(echo.Context) error {
