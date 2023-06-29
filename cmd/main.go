@@ -88,9 +88,28 @@ func main() {
 	app.OnRecordBeforeCreateRequest("adventures").Add(func(e *core.RecordCreateEvent) error {
 		return preserveOriginalFilenames(e.UploadedFiles, nil)
 	})
+	app.OnRecordBeforeCreateRequest().Add(func(e *core.RecordCreateEvent) error {
+		//Check guesses
+		if e.Collection.Name == "guesses" {
+			e.Record.Set("correct", checkGuess(app, e.Record))
+		}
+		return nil
+	})
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func checkGuess(app *pocketbase.PocketBase, r *models.Record) bool {
+	content := r.Get("content")
+	puzzle := r.Get("puzzle")
+	game := r.Get("game")
+	records, err := app.Dao().FindRecordsByExpr("answers", dbx.HashExp{
+		"game":   game,
+		"puzzle": puzzle,
+		"answer": content,
+	})
+	return err == nil || len(records) > 0
 }
 
 func startGame(app *pocketbase.PocketBase) func(echo.Context) error {
