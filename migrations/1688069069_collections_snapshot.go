@@ -375,7 +375,7 @@ func init() {
 			{
 				"id": "410a6wyrxhi89cg",
 				"created": "2023-06-26 19:57:50.207Z",
-				"updated": "2023-06-28 21:21:53.801Z",
+				"updated": "2023-06-29 19:25:50.821Z",
 				"name": "games",
 				"type": "base",
 				"system": false,
@@ -480,7 +480,7 @@ func init() {
 					}
 				],
 				"indexes": [],
-				"listRule": "@request.auth.games.id ?= id || @request.auth.id = user.id",
+				"listRule": "@request.auth.games.id ?= id || @request.auth.id = user.id || @request.headers.x_pocketbase_game = code",
 				"viewRule": null,
 				"createRule": null,
 				"updateRule": null,
@@ -490,7 +490,7 @@ func init() {
 			{
 				"id": "pcfz1rdnine760h",
 				"created": "2023-06-26 19:58:21.418Z",
-				"updated": "2023-06-28 21:21:53.801Z",
+				"updated": "2023-06-29 20:00:02.525Z",
 				"name": "guesses",
 				"type": "base",
 				"system": false,
@@ -549,9 +549,9 @@ func init() {
 					}
 				],
 				"indexes": [],
-				"listRule": null,
+				"listRule": "@request.headers.x_pocketbase_game = game.code && game.puzzle = puzzle.id",
 				"viewRule": null,
-				"createRule": null,
+				"createRule": "@request.headers.x_pocketbase_game = game.code && game.puzzle = puzzle.id",
 				"updateRule": null,
 				"deleteRule": null,
 				"options": {}
@@ -559,7 +559,7 @@ func init() {
 			{
 				"id": "k5593ds7n07c487",
 				"created": "2023-06-26 19:58:51.790Z",
-				"updated": "2023-06-28 21:21:53.801Z",
+				"updated": "2023-06-29 19:39:29.998Z",
 				"name": "puzzles",
 				"type": "base",
 				"system": false,
@@ -576,15 +576,6 @@ func init() {
 							"max": null,
 							"pattern": ""
 						}
-					},
-					{
-						"system": false,
-						"id": "7r7k3ntn",
-						"name": "content",
-						"type": "editor",
-						"required": false,
-						"unique": false,
-						"options": {}
 					},
 					{
 						"system": false,
@@ -615,11 +606,38 @@ func init() {
 							"maxSelect": 1,
 							"displayFields": []
 						}
+					},
+					{
+						"system": false,
+						"id": "5pkihs4z",
+						"name": "information",
+						"type": "editor",
+						"required": false,
+						"unique": false,
+						"options": {}
+					},
+					{
+						"system": false,
+						"id": "w5epy1nu",
+						"name": "story",
+						"type": "editor",
+						"required": false,
+						"unique": false,
+						"options": {}
+					},
+					{
+						"system": false,
+						"id": "myloln6s",
+						"name": "puzzle",
+						"type": "editor",
+						"required": false,
+						"unique": false,
+						"options": {}
 					}
 				],
 				"indexes": [],
 				"listRule": null,
-				"viewRule": null,
+				"viewRule": "@collection.games.adventure.id ?= adventure.id  && @collection.games.puzzle.id ?= id && @collection.games.code ?= @request.headers.x_pocketbase_game",
 				"createRule": null,
 				"updateRule": null,
 				"deleteRule": null,
