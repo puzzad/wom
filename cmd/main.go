@@ -7,6 +7,7 @@ import (
 	"github.com/csmith/envflag"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/labstack/echo/v5"
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -60,6 +61,12 @@ func main() {
 			Method:  http.MethodPost,
 			Handler: startAdventure(app),
 		})
+		_, err = e.Router.AddRoute(echo.Route{
+			Name:    "start game",
+			Path:    "/games/:code/start",
+			Method:  http.MethodPost,
+			Handler: startGame(app),
+		})
 		if err != nil {
 			return err
 		}
@@ -83,6 +90,31 @@ func main() {
 	})
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func startGame(app *pocketbase.PocketBase) func(echo.Context) error {
+	return func(c echo.Context) error {
+		code := c.PathParam("code")
+		if len(code) == 0 {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid Game"})
+		}
+		q := app.Dao().DB().NewQuery("UPDATE games SET status = 'ACTIVE', puzzle = (SELECT adventures.firstpuzzle FROM adventures WHERE adventures.id = games.adventure), start = datetime('now') WHERE code = {:code} AND status = 'PAID' AND (puzzle='' OR puzzle IS NULL);")
+		q = q.Bind(dbx.Params{"code": code})
+		result, err := q.Execute()
+		if err != nil {
+			fmt.Printf("%v\n", err)
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to start game 1"})
+		}
+		rows, err := result.RowsAffected()
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to start game 2"})
+		}
+		if rows != 1 {
+			fmt.Printf("Rows: %d\n", rows)
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to start game 3"})
+		}
+		return nil
 	}
 }
 

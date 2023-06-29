@@ -15,7 +15,7 @@ func init() {
 			{
 				"id": "_pb_users_auth_",
 				"created": "2023-06-26 19:27:36.595Z",
-				"updated": "2023-06-28 19:45:31.389Z",
+				"updated": "2023-06-28 21:21:53.801Z",
 				"name": "users",
 				"type": "auth",
 				"system": false,
@@ -90,7 +90,7 @@ func init() {
 			{
 				"id": "8480lghxmlrhtn6",
 				"created": "2023-06-26 19:53:11.369Z",
-				"updated": "2023-06-28 14:03:57.090Z",
+				"updated": "2023-06-28 21:21:53.801Z",
 				"name": "hints",
 				"type": "base",
 				"system": false,
@@ -160,7 +160,7 @@ func init() {
 			{
 				"id": "mlrnksy9yxm2dmv",
 				"created": "2023-06-26 19:53:51.292Z",
-				"updated": "2023-06-28 14:03:57.090Z",
+				"updated": "2023-06-28 21:21:53.801Z",
 				"name": "mailinglist",
 				"type": "base",
 				"system": false,
@@ -202,7 +202,7 @@ func init() {
 			{
 				"id": "t6dabzlosjg7sdb",
 				"created": "2023-06-26 19:54:33.247Z",
-				"updated": "2023-06-28 14:03:57.091Z",
+				"updated": "2023-06-28 21:21:53.801Z",
 				"name": "usedhints",
 				"type": "base",
 				"system": false,
@@ -261,7 +261,7 @@ func init() {
 			{
 				"id": "dsyy96h6bthpiev",
 				"created": "2023-06-26 19:55:28.099Z",
-				"updated": "2023-06-28 14:03:57.091Z",
+				"updated": "2023-06-28 21:21:53.801Z",
 				"name": "adventures",
 				"type": "base",
 				"system": false,
@@ -375,7 +375,7 @@ func init() {
 			{
 				"id": "410a6wyrxhi89cg",
 				"created": "2023-06-26 19:57:50.207Z",
-				"updated": "2023-06-28 20:22:58.750Z",
+				"updated": "2023-06-28 21:21:53.801Z",
 				"name": "games",
 				"type": "base",
 				"system": false,
@@ -490,7 +490,7 @@ func init() {
 			{
 				"id": "pcfz1rdnine760h",
 				"created": "2023-06-26 19:58:21.418Z",
-				"updated": "2023-06-28 14:03:57.091Z",
+				"updated": "2023-06-28 21:21:53.801Z",
 				"name": "guesses",
 				"type": "base",
 				"system": false,
@@ -559,7 +559,7 @@ func init() {
 			{
 				"id": "k5593ds7n07c487",
 				"created": "2023-06-26 19:58:51.790Z",
-				"updated": "2023-06-28 14:03:57.091Z",
+				"updated": "2023-06-28 21:21:53.801Z",
 				"name": "puzzles",
 				"type": "base",
 				"system": false,
