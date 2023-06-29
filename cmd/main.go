@@ -98,7 +98,7 @@ func main() {
 	})
 	app.OnRecordAfterCreateRequest("guesses").Add(func(e *core.RecordCreateEvent) error {
 		var code, title string
-		err := app.Dao().DB().Select("games.code as code", "puzzles.title as title").
+		err := app.Dao().DB().Select("games.username as username", "puzzles.title as title").
 			From("guesses").
 			InnerJoin("games", dbx.NewExp("games.id=guesses.game")).
 			InnerJoin("puzzles", dbx.NewExp("puzzles.id=guesses.puzzle")).
