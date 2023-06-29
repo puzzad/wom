@@ -15,7 +15,7 @@ func init() {
 			{
 				"id": "_pb_users_auth_",
 				"created": "2023-06-26 19:27:36.595Z",
-				"updated": "2023-06-28 21:21:53.801Z",
+				"updated": "2023-06-29 21:19:29.367Z",
 				"name": "users",
 				"type": "auth",
 				"system": false,
@@ -56,13 +56,13 @@ func init() {
 					},
 					{
 						"system": false,
-						"id": "voyvxiet",
+						"id": "0rywdkyy",
 						"name": "games",
 						"type": "relation",
 						"required": false,
 						"unique": false,
 						"options": {
-							"collectionId": "410a6wyrxhi89cg",
+							"collectionId": "vztgyvjzre4vxaf",
 							"cascadeDelete": false,
 							"minSelect": null,
 							"maxSelect": null,
@@ -90,7 +90,7 @@ func init() {
 			{
 				"id": "8480lghxmlrhtn6",
 				"created": "2023-06-26 19:53:11.369Z",
-				"updated": "2023-06-28 21:21:53.801Z",
+				"updated": "2023-06-29 20:11:18.444Z",
 				"name": "hints",
 				"type": "base",
 				"system": false,
@@ -160,7 +160,7 @@ func init() {
 			{
 				"id": "mlrnksy9yxm2dmv",
 				"created": "2023-06-26 19:53:51.292Z",
-				"updated": "2023-06-28 21:21:53.801Z",
+				"updated": "2023-06-29 20:11:18.444Z",
 				"name": "mailinglist",
 				"type": "base",
 				"system": false,
@@ -202,7 +202,7 @@ func init() {
 			{
 				"id": "t6dabzlosjg7sdb",
 				"created": "2023-06-26 19:54:33.247Z",
-				"updated": "2023-06-28 21:21:53.801Z",
+				"updated": "2023-06-29 21:18:48.907Z",
 				"name": "usedhints",
 				"type": "base",
 				"system": false,
@@ -236,13 +236,13 @@ func init() {
 					},
 					{
 						"system": false,
-						"id": "mclraxps",
+						"id": "5cv8lsrq",
 						"name": "game",
 						"type": "relation",
 						"required": false,
 						"unique": false,
 						"options": {
-							"collectionId": "410a6wyrxhi89cg",
+							"collectionId": "vztgyvjzre4vxaf",
 							"cascadeDelete": false,
 							"minSelect": null,
 							"maxSelect": 1,
@@ -261,7 +261,7 @@ func init() {
 			{
 				"id": "dsyy96h6bthpiev",
 				"created": "2023-06-26 19:55:28.099Z",
-				"updated": "2023-06-28 21:21:53.801Z",
+				"updated": "2023-06-29 20:11:18.444Z",
 				"name": "adventures",
 				"type": "base",
 				"system": false,
@@ -373,124 +373,9 @@ func init() {
 				"options": {}
 			},
 			{
-				"id": "410a6wyrxhi89cg",
-				"created": "2023-06-26 19:57:50.207Z",
-				"updated": "2023-06-29 19:25:50.821Z",
-				"name": "games",
-				"type": "base",
-				"system": false,
-				"schema": [
-					{
-						"system": false,
-						"id": "qigcpdpr",
-						"name": "status",
-						"type": "select",
-						"required": false,
-						"unique": false,
-						"options": {
-							"maxSelect": 1,
-							"values": [
-								"UNPAID",
-								"PAID",
-								"EXPIRED"
-							]
-						}
-					},
-					{
-						"system": false,
-						"id": "a4nt925u",
-						"name": "code",
-						"type": "text",
-						"required": true,
-						"unique": false,
-						"options": {
-							"min": null,
-							"max": null,
-							"pattern": ""
-						}
-					},
-					{
-						"system": false,
-						"id": "h8yfzu0u",
-						"name": "user",
-						"type": "relation",
-						"required": false,
-						"unique": false,
-						"options": {
-							"collectionId": "_pb_users_auth_",
-							"cascadeDelete": false,
-							"minSelect": null,
-							"maxSelect": 1,
-							"displayFields": []
-						}
-					},
-					{
-						"system": false,
-						"id": "ooicceyv",
-						"name": "adventure",
-						"type": "relation",
-						"required": true,
-						"unique": false,
-						"options": {
-							"collectionId": "dsyy96h6bthpiev",
-							"cascadeDelete": false,
-							"minSelect": null,
-							"maxSelect": 1,
-							"displayFields": []
-						}
-					},
-					{
-						"system": false,
-						"id": "ejdrirte",
-						"name": "puzzle",
-						"type": "relation",
-						"required": false,
-						"unique": false,
-						"options": {
-							"collectionId": "k5593ds7n07c487",
-							"cascadeDelete": false,
-							"minSelect": null,
-							"maxSelect": 1,
-							"displayFields": []
-						}
-					},
-					{
-						"system": false,
-						"id": "l50ob5lu",
-						"name": "start",
-						"type": "date",
-						"required": false,
-						"unique": false,
-						"options": {
-							"min": "",
-							"max": ""
-						}
-					},
-					{
-						"system": false,
-						"id": "4wxfchd9",
-						"name": "end",
-						"type": "date",
-						"required": false,
-						"unique": false,
-						"options": {
-							"min": "",
-							"max": ""
-						}
-					}
-				],
-				"indexes": [],
-				"listRule": "@request.auth.games.id ?= id || @request.auth.id = user.id || @request.headers.x_pocketbase_game = code",
-				"viewRule": null,
-				"createRule": null,
-				"updateRule": null,
-				"deleteRule": null,
-				"options": {}
-			},
-			{
 				"id": "pcfz1rdnine760h",
 				"created": "2023-06-26 19:58:21.418Z",
-				"updated": "2023-06-29 20:00:02.525Z",
+				"updated": "2023-06-29 22:05:11.098Z",
 				"name": "guesses",
 				"type": "base",
 				"system": false,
@@ -500,11 +385,11 @@ func init() {
 						"id": "gjjmekcy",
 						"name": "content",
 						"type": "text",
-						"required": false,
+						"required": true,
 						"unique": false,
 						"options": {
 							"min": null,
-							"max": null,
+							"max": 50,
 							"pattern": ""
 						}
 					},
@@ -525,33 +410,33 @@ func init() {
 					},
 					{
 						"system": false,
-						"id": "sjxisor6",
-						"name": "game",
-						"type": "relation",
-						"required": false,
-						"unique": false,
-						"options": {
-							"collectionId": "410a6wyrxhi89cg",
-							"cascadeDelete": false,
-							"minSelect": null,
-							"maxSelect": 1,
-							"displayFields": []
-						}
-					},
-					{
-						"system": false,
 						"id": "hukqqnrx",
 						"name": "correct",
 						"type": "bool",
 						"required": false,
 						"unique": false,
 						"options": {}
+					},
+					{
+						"system": false,
+						"id": "gjd6k5tg",
+						"name": "game",
+						"type": "relation",
+						"required": false,
+						"unique": false,
+						"options": {
+							"collectionId": "vztgyvjzre4vxaf",
+							"cascadeDelete": false,
+							"minSelect": null,
+							"maxSelect": 1,
+							"displayFields": []
+						}
 					}
 				],
 				"indexes": [],
-				"listRule": "@request.headers.x_pocketbase_game = game.code && game.puzzle = puzzle.id",
-				"viewRule": null,
-				"createRule": "@request.headers.x_pocketbase_game = game.code && game.puzzle = puzzle.id",
+				"listRule": "@request.auth.id = game.id && @request.auth.puzzle.id = puzzle.id",
+				"viewRule": "@request.auth.id = game.id && @request.auth.puzzle.id = puzzle.id",
+				"createRule": "@request.auth.id = game.id && @request.auth.puzzle.id = puzzle.id",
 				"updateRule": null,
 				"deleteRule": null,
 				"options": {}
@@ -559,7 +444,7 @@ func init() {
 			{
 				"id": "k5593ds7n07c487",
 				"created": "2023-06-26 19:58:51.790Z",
-				"updated": "2023-06-29 19:39:29.998Z",
+				"updated": "2023-06-29 21:51:59.418Z",
 				"name": "puzzles",
 				"type": "base",
 				"system": false,
@@ -637,11 +522,122 @@ func init() {
 				],
 				"indexes": [],
 				"listRule": null,
-				"viewRule": "@collection.games.adventure.id ?= adventure.id  && @collection.games.puzzle.id ?= id && @collection.games.code ?= @request.headers.x_pocketbase_game",
+				"viewRule": "@request.auth.puzzle.id = id",
 				"createRule": null,
 				"updateRule": null,
 				"deleteRule": null,
 				"options": {}
+			},
+			{
+				"id": "vztgyvjzre4vxaf",
+				"created": "2023-06-29 21:16:45.535Z",
+				"updated": "2023-06-29 21:30:09.792Z",
+				"name": "games",
+				"type": "auth",
+				"system": false,
+				"schema": [
+					{
+						"system": false,
+						"id": "48eqclsh",
+						"name": "status",
+						"type": "select",
+						"required": false,
+						"unique": false,
+						"options": {
+							"maxSelect": 1,
+							"values": [
+								"UNPAID",
+								"PAID",
+								"EXPIRED"
+							]
+						}
+					},
+					{
+						"system": false,
+						"id": "9ifgyjsw",
+						"name": "purchaser",
+						"type": "relation",
+						"required": false,
+						"unique": false,
+						"options": {
+							"collectionId": "_pb_users_auth_",
+							"cascadeDelete": false,
+							"minSelect": null,
+							"maxSelect": 1,
+							"displayFields": []
+						}
+					},
+					{
+						"system": false,
+						"id": "j5rdpozc",
+						"name": "adventure",
+						"type": "relation",
+						"required": true,
+						"unique": false,
+						"options": {
+							"collectionId": "dsyy96h6bthpiev",
+							"cascadeDelete": false,
+							"minSelect": null,
+							"maxSelect": 1,
+							"displayFields": []
+						}
+					},
+					{
+						"system": false,
+						"id": "9v3s2zwf",
+						"name": "start",
+						"type": "date",
+						"required": false,
+						"unique": false,
+						"options": {
+							"min": "",
+							"max": ""
+						}
+					},
+					{
+						"system": false,
+						"id": "vpvrshty",
+						"name": "end",
+						"type": "date",
+						"required": false,
+						"unique": false,
+						"options": {
+							"min": "",
+							"max": ""
+						}
+					},
+					{
+						"system": false,
+						"id": "kodqnhxo",
+						"name": "puzzle",
+						"type": "relation",
+						"required": false,
+						"unique": false,
+						"options": {
+							"collectionId": "k5593ds7n07c487",
+							"cascadeDelete": false,
+							"minSelect": null,
+							"maxSelect": 1,
+							"displayFields": []
+						}
+					}
+				],
+				"indexes": [],
+				"listRule": "id = @request.auth.id || @request.auth.games.id ?= id",
+				"viewRule": "id = @request.auth.id",
+				"createRule": null,
+				"updateRule": null,
+				"deleteRule": null,
+				"options": {
+					"allowEmailAuth": false,
+					"allowOAuth2Auth": false,
+					"allowUsernameAuth": true,
+					"exceptEmailDomains": [],
+					"manageRule": null,
+					"minPasswordLength": 5,
+					"onlyEmailDomains": [],
+					"requireEmail": false
+				}
 			}
 		]`
 
