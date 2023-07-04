@@ -9,12 +9,11 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/jackc/pgx/v5 v5.4.1
-	github.com/mailgun/mailgun-go/v4 v4.9.1
+	github.com/mailgun/mailgun-go/v4 v4.9.2
 )
 
 require (
 	github.com/ajg/form v1.5.1 // indirect
-	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
