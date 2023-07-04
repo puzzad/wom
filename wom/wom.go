@@ -10,6 +10,7 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
+	"github.com/pocketbase/pocketbase/cmd"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
@@ -21,28 +22,18 @@ import (
 )
 
 func ConfigurePocketBase(app *pocketbase.PocketBase) {
-	app.OnBeforeBootstrap().Add(func(e *core.BootstrapEvent) error {
-		var serveCmd *cobra.Command
-		for i := range app.RootCmd.Commands() {
-			if app.RootCmd.Commands()[i].Name() == "serve" {
-				serveCmd = app.RootCmd.Commands()[i]
-			}
-		}
-		if serveCmd == nil {
-			return fmt.Errorf("unable to find serve command")
-		}
-		serveCmd.Flags().StringP("email", "e", "", "Sets the initial admin email")
-		serveCmd.Flags().StringP("password", "p", "", "Sets the initial admin password")
-		serveCmd.Flags().StringP("webhook-url", "w", "", "Webhook to send events to {'content': 'message'}")
-		app.RootCmd.AddCommand(NewImportCmd())
-		app.OnBeforeServe().Add(createAdminAccountHook(serveCmd))
-		app.OnBeforeServe().Add(createWomRoutesHook(app))
-		app.OnRecordBeforeUpdateRequest("adventures").Add(createPreserveFilenameUpdateHook)
-		app.OnRecordBeforeCreateRequest("adventures").Add(createPreserveFilenameCreateHook)
-		app.OnRecordBeforeCreateRequest("guesses").Add(createBeforeGuessCreatedHook(app))
-		app.OnRecordAfterCreateRequest("guesses").Add(createGuessCreatedHook(app))
-		return nil
-	})
+	serveCmd := cmd.NewServeCommand(app, true)
+	serveCmd.PersistentFlags().StringP("email", "e", "", "Sets the initial admin email")
+	serveCmd.PersistentFlags().StringP("password", "p", "", "Sets the initial admin password")
+	serveCmd.PersistentFlags().StringP("webhook-url", "w", "", "Webhook to send events to {'content': 'message'}")
+	app.RootCmd.AddCommand(serveCmd)
+	app.RootCmd.AddCommand(NewImportCmd())
+	app.OnBeforeServe().Add(createAdminAccountHook(serveCmd))
+	app.OnBeforeServe().Add(createWomRoutesHook(app))
+	app.OnRecordBeforeUpdateRequest("adventures").Add(createPreserveFilenameUpdateHook)
+	app.OnRecordBeforeCreateRequest("adventures").Add(createPreserveFilenameCreateHook)
+	app.OnRecordBeforeCreateRequest("guesses").Add(createBeforeGuessCreatedHook(app))
+	app.OnRecordAfterCreateRequest("guesses").Add(createGuessCreatedHook(app))
 }
 
 func createBeforeGuessCreatedHook(app *pocketbase.PocketBase) func(e *core.RecordCreateEvent) error {
