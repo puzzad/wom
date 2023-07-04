@@ -1,12 +1,10 @@
-package main
+package wom
 
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"github.com/csmith/aca"
-	"github.com/csmith/envflag"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
@@ -15,50 +13,77 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
-	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
-	"github.com/puzzad/wom"
-	_ "github.com/puzzad/wom/migrations"
-	"log"
+	"github.com/puzzad/wom/cmd"
+	"github.com/spf13/cobra"
 	"math/rand"
 	"net/http"
 	"time"
 )
 
-var port = flag.Int("port", 3000, "Port to listen for HTTP requests")
-var initialAdminEmail = flag.String("au", "pocketbase@greg.holmes.name", "")
-var initialAdminPassword = flag.String("ap", "password", "")
-var dataDir = flag.String("dir", "./data", "")
-
-var webHookURL = flag.String("webhook-url", "", "Webhook to send events to {'content': 'message'}")
-
-func main() {
-	envflag.Parse()
-	app := pocketbase.NewWithConfig(&pocketbase.Config{
-		DefaultDataDir: *dataDir,
-	})
-	migratecmd.MustRegister(app, app.RootCmd, &migratecmd.Options{
-		Automigrate: true,
-	})
-	app.OnAfterBootstrap().Add(func(e *core.BootstrapEvent) error {
-		if len(*initialAdminEmail) == 0 ||
-			is.EmailFormat.Validate(*initialAdminEmail) != nil ||
-			len(*initialAdminPassword) == 0 {
-			return fmt.Errorf("invalid admin credentials")
-		}
-		admin, err := e.App.Dao().FindAdminByEmail(*initialAdminEmail)
-		if err != nil {
-			admin = &models.Admin{
-				Email: *initialAdminEmail,
+func ConfigurePocketBase(app *pocketbase.PocketBase) {
+	app.OnBeforeBootstrap().Add(func(e *core.BootstrapEvent) error {
+		var serveCmd *cobra.Command
+		for i := range app.RootCmd.Commands() {
+			if app.RootCmd.Commands()[i].Name() == "serve" {
+				serveCmd = app.RootCmd.Commands()[i]
 			}
 		}
-		err = admin.SetPassword(*initialAdminPassword)
-		if err != nil {
-			return err
+		if serveCmd == nil {
+			return fmt.Errorf("unable to find serve command")
 		}
-		return e.App.Dao().SaveAdmin(admin)
+		serveCmd.Flags().StringP("email", "e", "", "Sets the initial admin email")
+		serveCmd.Flags().StringP("password", "p", "", "Sets the initial admin password")
+		serveCmd.Flags().StringP("webhook-url", "w", "", "Webhook to send events to {'content': 'message'}")
+		app.RootCmd.AddCommand(cmd.NewImportCmd())
+		app.OnBeforeServe().Add(createAdminAccountHook(serveCmd))
+		app.OnBeforeServe().Add(createWomRoutesHook(app))
+		app.OnRecordBeforeUpdateRequest("adventures").Add(createPreserveFilenameUpdateHook)
+		app.OnRecordBeforeCreateRequest("adventures").Add(createPreserveFilenameCreateHook)
+		app.OnRecordBeforeCreateRequest("guesses").Add(createBeforeGuessCreatedHook(app))
+		app.OnRecordAfterCreateRequest("guesses").Add(createGuessCreatedHook(app))
+		return nil
 	})
-	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+}
+
+func createBeforeGuessCreatedHook(app *pocketbase.PocketBase) func(e *core.RecordCreateEvent) error {
+	return func(e *core.RecordCreateEvent) error {
+		e.Record.Set("correct", checkGuess(app, e.Record))
+		return nil
+	}
+}
+
+func createGuessCreatedHook(app *pocketbase.PocketBase) func(e *core.RecordCreateEvent) error {
+	return func(e *core.RecordCreateEvent) error {
+		var code, title string
+		err := app.Dao().DB().Select("games.username as username", "puzzles.title as title").
+			From("guesses").
+			InnerJoin("games", dbx.NewExp("games.id=guesses.game")).
+			InnerJoin("puzzles", dbx.NewExp("puzzles.id=guesses.puzzle")).
+			Where(dbx.HashExp{"guesses.id": e.Record.Id}).
+			Row(&code, &title)
+		if err == nil {
+			webhookURL, _ := app.RootCmd.Flags().GetString("webhook-url")
+			if e.Record.Get("correct").(bool) {
+				sendWebhook(webhookURL, fmt.Sprintf(":tada: %s/%s: %s", code, title, e.Record.Get("content")))
+			} else {
+				sendWebhook(webhookURL, fmt.Sprintf(":x: %s/%s: %s", code, title, e.Record.Get("content")))
+			}
+		}
+		return nil
+	}
+}
+
+func createPreserveFilenameCreateHook(e *core.RecordCreateEvent) error {
+	return preserveOriginalFilenames(e.UploadedFiles, e.Record)
+}
+
+func createPreserveFilenameUpdateHook(e *core.RecordUpdateEvent) error {
+	return preserveOriginalFilenames(e.UploadedFiles, e.Record)
+}
+
+func createWomRoutesHook(app *pocketbase.PocketBase) func(e *core.ServeEvent) error {
+	return func(e *core.ServeEvent) error {
 		_, err := e.Router.AddRoute(echo.Route{
 			Name:    "start adventure",
 			Path:    "/adventure/:id/start",
@@ -75,54 +100,54 @@ func main() {
 			return err
 		}
 		_, err = e.Router.AddRoute(echo.Route{
-			Name:    "send contact form",
-			Path:    "/mail/contact",
-			Method:  http.MethodPost,
-			Handler: wom.SendContactForm,
+			Name:   "send contact form",
+			Path:   "/mail/contact",
+			Method: http.MethodPost,
+			//Handler: wom.SendContactForm,
 		})
 		//e.Router.Add(http.MethodGet, "/mail/subscribe", wom.SubscribeToMailingList)
 		//e.Router.Add(http.MethodGet, "/mail/confirm", wom.ConfirmMailingListSubscription)
 		//e.Router.Add(http.MethodGet, "/mail/unsubscribe", wom.UnsubscribeFromMailingList)
 		//e.Router.Add(http.MethodGet, "/mail/contact", wom.SendContactForm)
 		return nil
-	})
-	app.OnRecordBeforeUpdateRequest("adventures").Add(func(e *core.RecordUpdateEvent) error {
-		return preserveOriginalFilenames(e.UploadedFiles, e.Record)
-	})
-	app.OnRecordBeforeCreateRequest("adventures").Add(func(e *core.RecordCreateEvent) error {
-		return preserveOriginalFilenames(e.UploadedFiles, nil)
-	})
-	app.OnRecordBeforeCreateRequest("guesses").Add(func(e *core.RecordCreateEvent) error {
-		e.Record.Set("correct", checkGuess(app, e.Record))
-		return nil
-	})
-	app.OnRecordAfterCreateRequest("guesses").Add(func(e *core.RecordCreateEvent) error {
-		var code, title string
-		err := app.Dao().DB().Select("games.username as username", "puzzles.title as title").
-			From("guesses").
-			InnerJoin("games", dbx.NewExp("games.id=guesses.game")).
-			InnerJoin("puzzles", dbx.NewExp("puzzles.id=guesses.puzzle")).
-			Where(dbx.HashExp{"guesses.id": e.Record.Id}).
-			Row(&code, &title)
-		if err == nil {
-			if e.Record.Get("correct").(bool) {
-				sendWebhook(fmt.Sprintf(":tada: %s/%s: %s", code, title, e.Record.Get("content")))
-			} else {
-				sendWebhook(fmt.Sprintf(":x: %s/%s: %s", code, title, e.Record.Get("content")))
-			}
-		}
-		return nil
-	})
-	if err := app.Start(); err != nil {
-		log.Fatal(err)
 	}
 }
 
-func sendWebhook(message string) {
+func createAdminAccountHook(serveCmd *cobra.Command) func(e *core.ServeEvent) error {
+	return func(e *core.ServeEvent) error {
+		email, _ := serveCmd.Flags().GetString("email")
+		password, _ := serveCmd.Flags().GetString("password")
+		if len(email) == 0 && len(password) == 0 {
+			return nil
+		}
+		if is.EmailFormat.Validate(email) != nil || len(password) <= 5 {
+			return fmt.Errorf("invalid admin credentials\n")
+		}
+		admin, err := e.App.Dao().FindAdminByEmail(email)
+		if err != nil {
+			fmt.Printf("Creating admin account: %s\n", email)
+			admin = &models.Admin{
+				Email: email,
+			}
+		}
+		err = admin.SetPassword(password)
+		if err != nil {
+			fmt.Printf("Error setting admin password: %v\n", err)
+			return err
+		}
+		err = e.App.Dao().SaveAdmin(admin)
+		if err != nil {
+			fmt.Printf("Error saving admin: %v\n", err)
+		}
+		return err
+	}
+}
+
+func sendWebhook(webHookURL, message string) {
 	type webhook struct {
 		Content string `json:"content"`
 	}
-	if len(*webHookURL) == 0 {
+	if len(webHookURL) == 0 {
 		return
 	}
 	data := &webhook{
@@ -132,7 +157,7 @@ func sendWebhook(message string) {
 	if err != nil {
 		return
 	}
-	_, err = http.Post(*webHookURL, "application/json", bytes.NewReader(dataBytes))
+	_, err = http.Post(webHookURL, "application/json", bytes.NewReader(dataBytes))
 	if err != nil {
 		return
 	}
