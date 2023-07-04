@@ -14,7 +14,6 @@ import (
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
-	"github.com/puzzad/wom/cmd"
 	"github.com/spf13/cobra"
 	"math/rand"
 	"net/http"
@@ -35,7 +34,7 @@ func ConfigurePocketBase(app *pocketbase.PocketBase) {
 		serveCmd.Flags().StringP("email", "e", "", "Sets the initial admin email")
 		serveCmd.Flags().StringP("password", "p", "", "Sets the initial admin password")
 		serveCmd.Flags().StringP("webhook-url", "w", "", "Webhook to send events to {'content': 'message'}")
-		app.RootCmd.AddCommand(cmd.NewImportCmd())
+		app.RootCmd.AddCommand(NewImportCmd())
 		app.OnBeforeServe().Add(createAdminAccountHook(serveCmd))
 		app.OnBeforeServe().Add(createWomRoutesHook(app))
 		app.OnRecordBeforeUpdateRequest("adventures").Add(createPreserveFilenameUpdateHook)
