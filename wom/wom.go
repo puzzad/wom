@@ -27,7 +27,7 @@ func ConfigurePocketBase(app *pocketbase.PocketBase) {
 	serveCmd.PersistentFlags().StringP("password", "p", "", "Sets the initial admin password")
 	serveCmd.PersistentFlags().StringP("webhook-url", "w", "", "Webhook to send events to {'content': 'message'}")
 	app.RootCmd.AddCommand(serveCmd)
-	app.RootCmd.AddCommand(NewImportCmd())
+	app.RootCmd.AddCommand(NewImportCmd(app))
 	app.OnBeforeServe().Add(createAdminAccountHook(serveCmd))
 	app.OnBeforeServe().Add(createWomRoutesHook(app))
 	app.OnRecordBeforeUpdateRequest("adventures").Add(createPreserveFilenameUpdateHook)
