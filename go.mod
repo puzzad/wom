@@ -4,11 +4,14 @@ go 1.20
 
 require (
 	github.com/csmith/aca v1.0.0
+	github.com/duke-git/lancet/v2 v2.2.3
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
+	github.com/go-resty/resty/v2 v2.7.0
 	github.com/labstack/echo/v5 v5.0.0-20220201181537-ed2888cfa198
 	github.com/pocketbase/dbx v1.10.0
 	github.com/pocketbase/pocketbase v0.16.6
 	github.com/spf13/cobra v1.7.0
+	golang.org/x/sync v0.3.0
 )
 
 require (
