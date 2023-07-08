@@ -18,6 +18,7 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/spf13/cobra"
+	"io"
 	"io/fs"
 	"log"
 	"math/rand"
@@ -118,10 +119,10 @@ func createWomRoutesHook(app *pocketbase.PocketBase) func(e *core.ServeEvent) er
 			Handler:     importAdventures(app),
 		})
 		_, err = e.Router.AddRoute(echo.Route{
-			Method:  http.MethodGet,
-			Name:    "request hints",
-			Path:    "/hints/get",
-			Handler: getHints(app),
+			Method:  http.MethodPost,
+			Name:    "request hint",
+			Path:    "/hints/request",
+			Handler: requestHint(app),
 		})
 		//e.Router.Add(http.MethodGet, "/mail/subscribe", wom.SubscribeToMailingList)
 		//e.Router.Add(http.MethodGet, "/mail/confirm", wom.ConfirmMailingListSubscription)
@@ -131,30 +132,45 @@ func createWomRoutesHook(app *pocketbase.PocketBase) func(e *core.ServeEvent) er
 	}
 }
 
-func getHints(app *pocketbase.PocketBase) echo.HandlerFunc {
+func requestHint(app *pocketbase.PocketBase) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		game, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
 		if game == nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Game not found"})
 		}
-		var hintResults []struct {
-			Id      string `json:"id"`
-			Title   string `json:"title"`
-			Message string `json:"message"`
-			Locked  bool   `json:"locked"`
-		}
-		err := app.Dao().DB().
-			Select("hints.id as id", "hints.title as title", "IIF(usedhints.id IS NULL, '', hints.message) as message", "IIF(usedhints.id IS NULL, true, false) as locked").
-			From("hints").
-			LeftJoin("usedhints", dbx.HashExp{"hints.id": "usedhints.hint", "usedhints.game": game.Get("username")}).
-			Where(dbx.HashExp{"hints.puzzle": game.Get("puzzle")}).
-			OrderBy("hints.order").
-			All(&hintResults)
+		usedhints, err := app.Dao().FindCollectionByNameOrId("usedhints")
 		if err != nil {
-			fmt.Printf("err: %s", err)
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "hints not found"})
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "usedhints not found"})
 		}
-		return c.JSON(http.StatusOK, hintResults)
+		guesses, err := app.Dao().FindCollectionByNameOrId("guesses")
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "guesses not found"})
+		}
+		record := models.NewRecord(usedhints)
+		record.RefreshId()
+		hintID, err := io.ReadAll(c.Request().Body)
+		defer func() {
+			_ = c.Request().Body.Close()
+		}()
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "hintID not found"})
+		}
+		record.Set("hint", hintID)
+		record.Set("game", game.Id)
+		err = app.Dao().SaveRecord(record)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "unable to request hint"})
+		}
+		record = models.NewRecord(guesses)
+		record.RefreshId()
+		record.Set("game", game.Id)
+		record.Set("puzzle", game.Get("puzzle"))
+		record.Set("content", "*hint")
+		err = app.Dao().SaveRecord(record)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "unable to request hint"})
+		}
+		return c.JSON(http.StatusOK, "")
 	}
 }
 
