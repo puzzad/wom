@@ -117,11 +117,44 @@ func createWomRoutesHook(app *pocketbase.PocketBase) func(e *core.ServeEvent) er
 			Middlewares: []echo.MiddlewareFunc{apis.RequireAdminAuth()},
 			Handler:     importAdventures(app),
 		})
+		_, err = e.Router.AddRoute(echo.Route{
+			Method:  http.MethodGet,
+			Name:    "request hints",
+			Path:    "/hints/get",
+			Handler: getHints(app),
+		})
 		//e.Router.Add(http.MethodGet, "/mail/subscribe", wom.SubscribeToMailingList)
 		//e.Router.Add(http.MethodGet, "/mail/confirm", wom.ConfirmMailingListSubscription)
 		//e.Router.Add(http.MethodGet, "/mail/unsubscribe", wom.UnsubscribeFromMailingList)
 		//e.Router.Add(http.MethodGet, "/mail/contact", wom.SendContactForm)
 		return nil
+	}
+}
+
+func getHints(app *pocketbase.PocketBase) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		game, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
+		if game == nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Game not found"})
+		}
+		var hintResults []struct {
+			Id      string `json:"id"`
+			Title   string `json:"title"`
+			Message string `json:"message"`
+			Locked  bool   `json:"locked"`
+		}
+		err := app.Dao().DB().
+			Select("hints.id as id", "hints.title as title", "IIF(usedhints.id IS NULL, '', hints.message) as message", "IIF(usedhints.id IS NULL, true, false) as locked").
+			From("hints").
+			LeftJoin("usedhints", dbx.HashExp{"hints.id": "usedhints.hint", "usedhints.game": game.Get("username")}).
+			Where(dbx.HashExp{"hints.puzzle": game.Get("puzzle")}).
+			OrderBy("hints.order").
+			All(&hintResults)
+		if err != nil {
+			fmt.Printf("err: %s", err)
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "hints not found"})
+		}
+		return c.JSON(http.StatusOK, hintResults)
 	}
 }
 
