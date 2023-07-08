@@ -202,23 +202,11 @@ func init() {
 			{
 				"id": "t6dabzlosjg7sdb",
 				"created": "2023-07-08 16:30:10.636Z",
-				"updated": "2023-07-08 16:30:10.636Z",
+				"updated": "2023-07-08 23:15:00.305Z",
 				"name": "usedhints",
 				"type": "base",
 				"system": false,
 				"schema": [
-					{
-						"system": false,
-						"id": "l1n7g3rq",
-						"name": "usedat",
-						"type": "date",
-						"required": false,
-						"unique": false,
-						"options": {
-							"min": "",
-							"max": ""
-						}
-					},
 					{
 						"system": false,
 						"id": "yrjkj7b8",
@@ -683,6 +671,71 @@ func init() {
 				"updateRule": null,
 				"deleteRule": null,
 				"options": {}
+			},
+			{
+				"id": "djlovsu233v2617",
+				"created": "2023-07-08 23:24:57.624Z",
+				"updated": "2023-07-08 23:46:19.381Z",
+				"name": "currenthints",
+				"type": "view",
+				"system": false,
+				"schema": [
+					{
+						"system": false,
+						"id": "cvbeqqwq",
+						"name": "title",
+						"type": "text",
+						"required": false,
+						"unique": false,
+						"options": {
+							"min": null,
+							"max": null,
+							"pattern": ""
+						}
+					},
+					{
+						"system": false,
+						"id": "zhdrt8rd",
+						"name": "message",
+						"type": "json",
+						"required": false,
+						"unique": false,
+						"options": {}
+					},
+					{
+						"system": false,
+						"id": "w8oe1i0a",
+						"name": "locked",
+						"type": "json",
+						"required": false,
+						"unique": false,
+						"options": {}
+					},
+					{
+						"system": false,
+						"id": "islksdnw",
+						"name": "puzzleid",
+						"type": "relation",
+						"required": false,
+						"unique": false,
+						"options": {
+							"collectionId": "k5593ds7n07c487",
+							"cascadeDelete": false,
+							"minSelect": null,
+							"maxSelect": 1,
+							"displayFields": []
+						}
+					}
+				],
+				"indexes": [],
+				"listRule": "@request.auth.puzzle.id = puzzleid",
+				"viewRule": null,
+				"createRule": null,
+				"updateRule": null,
+				"deleteRule": null,
+				"options": {
+					"query": "select hints.id as id, hints.title as title, iif(usedhints.id ISNULL, '', hints.message) as message, iif(usedhints.id ISNULL, true, false) as locked, hints.puzzle as puzzleid\nfrom hints\nleft join usedhints on hints.id = usedhints.hint"
+				}
 			}
 		]`
 
