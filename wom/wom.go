@@ -54,19 +54,19 @@ func createBeforeGuessCreatedHook(app *pocketbase.PocketBase) func(e *core.Recor
 
 func createGuessCreatedHook(app *pocketbase.PocketBase) func(e *core.RecordCreateEvent) error {
 	return func(e *core.RecordCreateEvent) error {
-		var code, title string
+		var username, title string
 		err := app.Dao().DB().Select("games.username as username", "puzzles.title as title").
 			From("guesses").
 			InnerJoin("games", dbx.NewExp("games.id=guesses.game")).
 			InnerJoin("puzzles", dbx.NewExp("puzzles.id=guesses.puzzle")).
 			Where(dbx.HashExp{"guesses.id": e.Record.Id}).
-			Row(&code, &title)
+			Row(&username, &title)
 		if err == nil {
 			webhookURL, _ := app.RootCmd.Flags().GetString("webhook-url")
 			if e.Record.Get("correct").(bool) {
-				sendWebhook(webhookURL, fmt.Sprintf(":tada: %s/%s: %s", code, title, e.Record.Get("content")))
+				sendWebhook(webhookURL, fmt.Sprintf(":tada: %s/%s: %s", username, title, e.Record.Get("content")))
 			} else {
-				sendWebhook(webhookURL, fmt.Sprintf(":x: %s/%s: %s", code, title, e.Record.Get("content")))
+				sendWebhook(webhookURL, fmt.Sprintf(":x: %s/%s: %s", username, title, e.Record.Get("content")))
 			}
 		}
 		return nil
@@ -346,14 +346,13 @@ func sendWebhook(webHookURL, message string) {
 func checkGuess(app *pocketbase.PocketBase, r *models.Record) bool {
 	content := r.Get("content")
 	puzzle := r.Get("puzzle")
-	game := r.Get("game")
 	var count string
 	err := app.Dao().DB().Select("count(*)").From("answers").
 		AndWhere(dbx.HashExp{"puzzle": puzzle}).
-		AndWhere(dbx.HashExp{"game": game}).
-		AndWhere(dbx.HashExp{"answer": content}).
+		AndWhere(dbx.HashExp{"content": content}).
 		Row(&count)
 	if err != nil {
+		log.Printf("Error checking guess: %s", err)
 		return false
 	}
 	return count == "1"
@@ -365,8 +364,8 @@ func startGame(app *pocketbase.PocketBase) func(echo.Context) error {
 		if len(code) == 0 {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid Game"})
 		}
-		q := app.Dao().DB().NewQuery("UPDATE games SET status = 'ACTIVE', puzzle = (SELECT adventures.firstpuzzle FROM adventures WHERE adventures.id = games.adventure), start = datetime('now') WHERE code = {:code} AND status = 'PAID' AND (puzzle='' OR puzzle IS NULL);")
-		q = q.Bind(dbx.Params{"code": code})
+		q := app.Dao().DB().NewQuery("UPDATE games SET status = 'ACTIVE', puzzle = (SELECT adventures.firstpuzzle FROM adventures WHERE adventures.id = games.adventure), start = datetime('now') WHERE username = {:username} AND status = 'PAID' AND (puzzle='' OR puzzle IS NULL);")
+		q = q.Bind(dbx.Params{"username": code})
 		result, err := q.Execute()
 		if err != nil {
 			fmt.Printf("%v\n", err)
@@ -405,7 +404,7 @@ func startAdventure(app *pocketbase.PocketBase) func(echo.Context) error {
 		if !user.Verified() {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email must be verified"})
 		}
-		acaGen, err := aca.NewGenerator("-", rand.NewSource(time.Now().UnixNano()))
+		acaGen, err := aca.NewGenerator(".", rand.NewSource(time.Now().UnixNano()))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to generate ACA"})
 		}
@@ -416,7 +415,7 @@ func startAdventure(app *pocketbase.PocketBase) func(echo.Context) error {
 			"status":          "PAID",
 			"user":            user.Id,
 			"adventure":       adventure.Id,
-			"code":            code,
+			"username":        code,
 			"password":        "puzzad",
 			"passwordConfirm": "puzzad",
 		})
