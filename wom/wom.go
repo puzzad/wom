@@ -3,8 +3,10 @@ package wom
 import (
 	"archive/zip"
 	"bytes"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/csmith/aca"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
@@ -14,6 +16,7 @@ import (
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/cmd"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/daos"
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
@@ -64,6 +67,9 @@ func createGuessCreatedHook(app *pocketbase.PocketBase) func(e *core.RecordCreat
 		if err == nil {
 			webhookURL, _ := app.RootCmd.Flags().GetString("webhook-url")
 			if e.Record.Get("correct").(bool) {
+				if err = handleCorrectGuess(app.Dao(), e.Record); err != nil {
+					log.Printf("Error updating next puzzle: %v\n", err)
+				}
 				sendWebhook(webhookURL, fmt.Sprintf(":tada: %s/%s: %s", username, title, e.Record.Get("content")))
 			} else {
 				sendWebhook(webhookURL, fmt.Sprintf(":x: %s/%s: %s", username, title, e.Record.Get("content")))
@@ -71,6 +77,28 @@ func createGuessCreatedHook(app *pocketbase.PocketBase) func(e *core.RecordCreat
 		}
 		return nil
 	}
+}
+
+func handleCorrectGuess(db *daos.Dao, record *models.Record) error {
+	game, err := db.FindRecordById("games", record.Get("game").(string))
+	if err != nil {
+		return err
+	}
+	puzzle, err := db.FindRecordById("puzzles", record.Get("puzzle").(string))
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	if err != nil {
+		return err
+	}
+	if puzzle.Get("next") == "" {
+		game.Set("puzzle", nil)
+		game.Set("status", "EXPIRED")
+		game.Set("end", time.Now())
+	} else {
+		game.Set("puzzle", puzzle.Get("next"))
+	}
+	return db.SaveRecord(game)
 }
 
 func createPreserveFilenameCreateHook(e *core.RecordCreateEvent) error {
