@@ -417,8 +417,8 @@ func startAdventure(app *pocketbase.PocketBase) func(echo.Context) error {
 			"user":            user.Id,
 			"adventure":       adventure.Id,
 			"code":            code,
-			"password":        "password",
-			"passwordConfirm": "password",
+			"password":        "puzzad",
+			"passwordConfirm": "puzzad",
 		})
 		if err = form.Submit(); err != nil {
 			fmt.Printf("Unable to add Adventure: %v\n", err)
