@@ -412,18 +412,17 @@ func startAdventure(app *pocketbase.PocketBase) func(echo.Context) error {
 		code := acaGen.Generate()
 		record := models.NewRecord(collection)
 		form := forms.NewRecordUpsert(app, record)
+		password := randStr()
 		err = form.LoadData(map[string]any{
-			"status":    "PAID",
-			"user":      user.Id,
-			"adventure": adventure.Id,
-			"code":      code,
+			"status":          "PAID",
+			"user":            user.Id,
+			"adventure":       adventure.Id,
+			"code":            code,
+			"password":        password,
+			"passwordConfirm": password,
 		})
 		if err = form.Submit(); err != nil {
-			fmt.Printf("%v", err)
-			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to add adventure"})
-		}
-		if err = form.Submit(); err != nil {
-			fmt.Printf("%v", err)
+			fmt.Printf("Unable to add Adventure: %v\n", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to add adventure"})
 		}
 		return c.JSON(http.StatusOK, map[string]string{"code": code})
@@ -595,6 +594,15 @@ func readDir(zfs fs.FS, name string) []os.DirEntry {
 		panic(err)
 	}
 	return files
+}
+
+func randStr() string {
+	var charset = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	b := make([]byte, 50)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b)
 }
 
 type adventure struct {
