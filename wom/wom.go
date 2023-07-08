@@ -109,7 +109,7 @@ func createWomRoutesHook(app *pocketbase.PocketBase) func(e *core.ServeEvent) er
 			Name:        "import adventure zip",
 			Path:        "/import/zip",
 			Middlewares: []echo.MiddlewareFunc{apis.RequireAdminAuth()},
-			Handler:     importAdventures,
+			Handler:     importAdventures(app),
 		})
 		//e.Router.Add(http.MethodGet, "/mail/subscribe", wom.SubscribeToMailingList)
 		//e.Router.Add(http.MethodGet, "/mail/confirm", wom.ConfirmMailingListSubscription)
@@ -119,34 +119,127 @@ func createWomRoutesHook(app *pocketbase.PocketBase) func(e *core.ServeEvent) er
 	}
 }
 
-func importAdventures(c echo.Context) error {
-	form, err := c.MultipartForm()
-	if err != nil {
-		return err
-	}
-	if len(form.File["adventures.zip"]) != 1 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Must be one file called adventures.zip"})
-	}
-	file := form.File["adventures.zip"][0]
-	fileReader, err := file.Open()
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to open file"})
-	}
-	zipReader, err := zip.NewReader(fileReader, file.Size)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to open zip"})
-	}
-	adventures := getAdventures(zipReader, false)
-	adventureMap := make(map[string][]string)
-	for i := range adventures {
-		puzzleList := make([]string, 0)
-		for j := range adventures[i].puzzles {
-			puzzleList = append(puzzleList, adventures[i].puzzles[j].name)
+func importAdventures(app *pocketbase.PocketBase) func(c echo.Context) error {
+	return func(c echo.Context) error {
+		form, err := c.MultipartForm()
+		if err != nil {
+			return err
 		}
-		adventureMap[adventures[i].name] = puzzleList
+		if len(form.File["adventures.zip"]) != 1 {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Must be one file called adventures.zip"})
+		}
+		file := form.File["adventures.zip"][0]
+		fileReader, err := file.Open()
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to open file"})
+		}
+		zipReader, err := zip.NewReader(fileReader, file.Size)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to open zip"})
+		}
+		adventures := getAdventures(zipReader, false)
+		updateAdventures(app, adventures)
+		return c.JSON(http.StatusOK, nil)
 	}
-	fmt.Printf("Uploaded: %+v", adventureMap)
-	return c.JSON(http.StatusOK, adventureMap)
+}
+
+func updateAdventures(app *pocketbase.PocketBase, adventures []*adventure) {
+	puzzlesfs, err := app.NewFilesystem()
+	defer func() {
+		_ = puzzlesfs.Close()
+	}()
+	if err != nil {
+		log.Fatalf("Unable to get filesystem: %s", err)
+	}
+	for i := range adventures {
+		adventureRecord, err := app.Dao().FindFirstRecordByData("adventures", "name", adventures[i].name)
+		if err != nil {
+			collection, err := app.Dao().FindCollectionByNameOrId("adventures")
+			if err != nil {
+				log.Fatalf("Unable to find adventures collection: %s\n", err)
+			}
+			adventureRecord = models.NewRecord(collection)
+			adventureRecord.RefreshId()
+		}
+		adventureRecord.Set("name", adventures[i].name)
+		adventureRecord.Set("description", adventures[i].description)
+		adventureRecord.Set("price", adventures[i].price)
+		adventureRecord.Set("public", !adventures[i].private)
+		adventureRecord.Set("features", adventures[i].features)
+		if adventures[i].background != nil {
+			file, err := filesystem.NewFileFromBytes(adventures[i].background, "background.png")
+			if err != nil {
+				log.Fatalf("Unable to upload background: %s", err)
+			}
+			adventureRecord.Set("background", file.Name)
+			err = puzzlesfs.Upload(adventures[i].background, adventureRecord.BaseFilesPath()+"/"+file.Name)
+			if err != nil {
+				log.Fatalf("Unable to upload background: %s", err)
+			}
+		} else {
+			log.Fatalf("No background")
+		}
+		if adventures[i].logo != nil {
+			file, err := filesystem.NewFileFromBytes(adventures[i].logo, "logo.png")
+			if err != nil {
+				log.Fatalf("Unable to upload logo: %s", err)
+			}
+			adventureRecord.Set("logo", file.Name)
+			err = puzzlesfs.Upload(adventures[i].logo, adventureRecord.BaseFilesPath()+"/"+file.Name)
+			if err != nil {
+				log.Fatalf("Unable to upload logo: %s", err)
+			}
+		} else {
+			log.Fatalf("No logo")
+		}
+		err = app.Dao().SaveRecord(adventureRecord)
+		if err != nil {
+			log.Fatalf("Unable to save adventure: %s\n", err)
+		}
+		fmt.Printf("Adventure saved: %s\n", adventureRecord.Get("name"))
+		for j := range adventures[i].puzzles {
+			fmt.Printf("Trying to add puzzle: %s\n", adventures[i].puzzles[j].name)
+			puzzleRecords, err := app.Dao().FindRecordsByExpr("puzzles", dbx.HashExp{"title": adventures[i].puzzles[j].name, "adventure": adventureRecord.Id})
+			if err != nil {
+				log.Fatalf("Unable to find puzzle: %s\n", err)
+			}
+			var puzzleRecord *models.Record
+			if len(puzzleRecords) == 0 {
+				collection, err := app.Dao().FindCollectionByNameOrId("puzzles")
+				if err != nil {
+					log.Fatalf("Unable to find puzzles collection: %s\n", err)
+				}
+				puzzleRecord = models.NewRecord(collection)
+				puzzleRecord.RefreshId()
+			} else {
+				puzzleRecord = puzzleRecords[0]
+			}
+			puzzleRecord.Set("title", adventures[i].puzzles[j].name)
+			puzzleRecord.Set("adventure", adventureRecord.Id)
+			puzzleRecord.Set("information", adventures[i].puzzles[j].info)
+			puzzleRecord.Set("story", adventures[i].puzzles[j].story)
+			puzzleRecord.Set("puzzle", adventures[i].puzzles[j].text)
+			err = app.Dao().SaveRecord(puzzleRecord)
+			if err != nil {
+				log.Fatalf("Unable to save puzzle: %s\n", err)
+			}
+			fmt.Printf("Puzzle saved: %s\n", puzzleRecord.Get("title"))
+			//for k := range adventures[i].puzzles[j].answers {
+			//	fmt.Printf("Adding hint for %s: %s - %s", adventures[i].name, adventures[i].puzzles[k].name, adventures[i].puzzles[j].answers[k])
+			//}
+			//for k := range adventures[i].puzzles[j].hints {
+			//	fmt.Printf("Adding hint for %s: %s - %s", adventures[i].name, adventures[i].puzzles[k].name, adventures[i].puzzles[j].hints[k])
+			//}
+			if j == 0 {
+				adventureRecord.Set("firstpuzzle", puzzleRecord.Id)
+				err = app.Dao().SaveRecord(adventureRecord)
+				if err != nil {
+					log.Fatalf("Unable to update firstPuzzle: %s\n", err)
+				}
+				fmt.Printf("Updated first puzzle: %s\n", puzzleRecord.Id)
+			}
+		}
+	}
 }
 
 func createAdminAccountHook(serveCmd *cobra.Command) func(e *core.ServeEvent) error {
@@ -346,6 +439,10 @@ func checkAdventure(zfs fs.FS, name string, prod bool) *adventure {
 		}
 	}
 
+	if len(puzzles) == 0 {
+		return nil
+	}
+
 	return &adventure{
 		name:        name,
 		description: description,
@@ -373,9 +470,9 @@ func checkPuzzle(zfs fs.FS, folder string) puzzle {
 		hintParts := strings.SplitN(h, ": ", 2)
 		hints = append(hints, [2]string{hintParts[0], hintParts[1]})
 	}
-	content := replaceVariables(zfs, folder, readTextFile(zfs, filepath.Join(folder, "puzzle.html")))
-	story := replaceVariables(zfs, folder, readTextFile(zfs, filepath.Join(folder, "information.html")))
-	information := replaceVariables(zfs, folder, readTextFile(zfs, filepath.Join(folder, "story.html")))
+	content := replaceVariables(zfs, readTextFile(zfs, filepath.Join(folder, "puzzle.html")), folder)
+	story := replaceVariables(zfs, readTextFile(zfs, filepath.Join(folder, "story.html")), folder)
+	information := replaceVariables(zfs, readTextFile(zfs, filepath.Join(folder, "information.html")), folder)
 
 	return puzzle{
 		order:   number,
@@ -422,6 +519,8 @@ func replaceVariables(zfs fs.FS, content, path string) (output string) {
 			datauri := fmt.Sprintf("data:%s;base64,%s", contentType, b64)
 			output = strings.ReplaceAll(content, match, datauri)
 		}
+	} else {
+		output = content
 	}
 	return output
 }

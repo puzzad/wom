@@ -13,81 +13,6 @@ func init() {
 	m.Register(func(db dbx.Builder) error {
 		jsonData := `[
 			{
-				"id": "_pb_users_auth_",
-				"created": "2023-06-26 19:27:36.595Z",
-				"updated": "2023-06-29 21:19:29.367Z",
-				"name": "users",
-				"type": "auth",
-				"system": false,
-				"schema": [
-					{
-						"system": false,
-						"id": "users_name",
-						"name": "name",
-						"type": "text",
-						"required": false,
-						"unique": false,
-						"options": {
-							"min": null,
-							"max": null,
-							"pattern": ""
-						}
-					},
-					{
-						"system": false,
-						"id": "users_avatar",
-						"name": "avatar",
-						"type": "file",
-						"required": false,
-						"unique": false,
-						"options": {
-							"maxSelect": 1,
-							"maxSize": 5242880,
-							"mimeTypes": [
-								"image/jpeg",
-								"image/png",
-								"image/svg+xml",
-								"image/gif",
-								"image/webp"
-							],
-							"thumbs": null,
-							"protected": false
-						}
-					},
-					{
-						"system": false,
-						"id": "0rywdkyy",
-						"name": "games",
-						"type": "relation",
-						"required": false,
-						"unique": false,
-						"options": {
-							"collectionId": "vztgyvjzre4vxaf",
-							"cascadeDelete": false,
-							"minSelect": null,
-							"maxSelect": null,
-							"displayFields": []
-						}
-					}
-				],
-				"indexes": [],
-				"listRule": "id = @request.auth.id",
-				"viewRule": "id = @request.auth.id",
-				"createRule": "",
-				"updateRule": "id = @request.auth.id",
-				"deleteRule": "id = @request.auth.id",
-				"options": {
-					"allowEmailAuth": true,
-					"allowOAuth2Auth": true,
-					"allowUsernameAuth": false,
-					"exceptEmailDomains": null,
-					"manageRule": null,
-					"minPasswordLength": 8,
-					"onlyEmailDomains": null,
-					"requireEmail": true
-				}
-			},
-			{
 				"id": "8480lghxmlrhtn6",
 				"created": "2023-06-26 19:53:11.369Z",
 				"updated": "2023-06-29 20:11:18.444Z",
@@ -637,6 +562,141 @@ func init() {
 					"minPasswordLength": 5,
 					"onlyEmailDomains": [],
 					"requireEmail": false
+				}
+			},
+			{
+				"id": "03oa5ildtnmrxsn",
+				"created": "2023-06-29 22:42:12.279Z",
+				"updated": "2023-06-29 22:42:12.279Z",
+				"name": "answers",
+				"type": "base",
+				"system": false,
+				"schema": [
+					{
+						"system": false,
+						"id": "c6jkot5j",
+						"name": "game",
+						"type": "relation",
+						"required": false,
+						"unique": false,
+						"options": {
+							"collectionId": "vztgyvjzre4vxaf",
+							"cascadeDelete": false,
+							"minSelect": null,
+							"maxSelect": 1,
+							"displayFields": []
+						}
+					},
+					{
+						"system": false,
+						"id": "jyt3mvz0",
+						"name": "puzzle",
+						"type": "relation",
+						"required": false,
+						"unique": false,
+						"options": {
+							"collectionId": "k5593ds7n07c487",
+							"cascadeDelete": false,
+							"minSelect": null,
+							"maxSelect": 1,
+							"displayFields": []
+						}
+					},
+					{
+						"system": false,
+						"id": "hwuhbtvk",
+						"name": "content",
+						"type": "text",
+						"required": false,
+						"unique": false,
+						"options": {
+							"min": null,
+							"max": null,
+							"pattern": ""
+						}
+					}
+				],
+				"indexes": [],
+				"listRule": null,
+				"viewRule": null,
+				"createRule": null,
+				"updateRule": null,
+				"deleteRule": null,
+				"options": {}
+			},
+			{
+				"id": "_pb_users_auth_",
+				"created": "2023-07-02 10:09:30.448Z",
+				"updated": "2023-07-02 10:09:30.449Z",
+				"name": "users",
+				"type": "auth",
+				"system": false,
+				"schema": [
+					{
+						"system": false,
+						"id": "users_name",
+						"name": "name",
+						"type": "text",
+						"required": false,
+						"unique": false,
+						"options": {
+							"min": null,
+							"max": null,
+							"pattern": ""
+						}
+					},
+					{
+						"system": false,
+						"id": "users_avatar",
+						"name": "avatar",
+						"type": "file",
+						"required": false,
+						"unique": false,
+						"options": {
+							"maxSelect": 1,
+							"maxSize": 5242880,
+							"mimeTypes": [
+								"image/jpeg",
+								"image/png",
+								"image/svg+xml",
+								"image/gif",
+								"image/webp"
+							],
+							"thumbs": null,
+							"protected": false
+						}
+					},
+					{
+						"system": false,
+						"id": "0rywdkyy",
+						"name": "games",
+						"type": "relation",
+						"required": false,
+						"unique": false,
+						"options": {
+							"collectionId": "vztgyvjzre4vxaf",
+							"cascadeDelete": false,
+							"minSelect": null,
+							"maxSelect": null,
+							"displayFields": []
+						}
+					}
+				],
+				"indexes": [],
+				"listRule": "id = @request.auth.id",
+				"viewRule": "id = @request.auth.id",
+				"createRule": "",
+				"updateRule": "id = @request.auth.id",
+				"deleteRule": "id = @request.auth.id",
+				"options": {
+					"allowEmailAuth": true,
+					"allowOAuth2Auth": true,
+					"allowUsernameAuth": false,
+					"exceptEmailDomains": null,
+					"manageRule": null,
+					"minPasswordLength": 8,
+					"onlyEmailDomains": null,
+					"requireEmail": true
 				}
 			}
 		]`
