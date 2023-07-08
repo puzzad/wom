@@ -167,38 +167,24 @@ func updateAdventures(app *pocketbase.PocketBase, adventures []*adventure) {
 		adventureRecord.Set("public", !adventures[i].private)
 		adventureRecord.Set("features", adventures[i].features)
 		if adventures[i].background != nil {
-			file, err := filesystem.NewFileFromBytes(adventures[i].background, "background.png")
+			adventureRecord.Set("background", "background.jpg")
+			err = puzzlesfs.Upload(adventures[i].background, adventureRecord.BaseFilesPath()+"/background.jpg")
 			if err != nil {
 				log.Fatalf("Unable to upload background: %s", err)
 			}
-			adventureRecord.Set("background", file.Name)
-			err = puzzlesfs.Upload(adventures[i].background, adventureRecord.BaseFilesPath()+"/"+file.Name)
-			if err != nil {
-				log.Fatalf("Unable to upload background: %s", err)
-			}
-		} else {
-			log.Fatalf("No background")
 		}
 		if adventures[i].logo != nil {
-			file, err := filesystem.NewFileFromBytes(adventures[i].logo, "logo.png")
+			adventureRecord.Set("logo", "logo.png")
+			err = puzzlesfs.Upload(adventures[i].logo, adventureRecord.BaseFilesPath()+"/logo.png")
 			if err != nil {
 				log.Fatalf("Unable to upload logo: %s", err)
 			}
-			adventureRecord.Set("logo", file.Name)
-			err = puzzlesfs.Upload(adventures[i].logo, adventureRecord.BaseFilesPath()+"/"+file.Name)
-			if err != nil {
-				log.Fatalf("Unable to upload logo: %s", err)
-			}
-		} else {
-			log.Fatalf("No logo")
 		}
 		err = app.Dao().SaveRecord(adventureRecord)
 		if err != nil {
 			log.Fatalf("Unable to save adventure: %s\n", err)
 		}
-		fmt.Printf("Adventure saved: %s\n", adventureRecord.Get("name"))
 		for j := range adventures[i].puzzles {
-			fmt.Printf("Trying to add puzzle: %s\n", adventures[i].puzzles[j].name)
 			puzzleRecords, err := app.Dao().FindRecordsByExpr("puzzles", dbx.HashExp{"title": adventures[i].puzzles[j].name, "adventure": adventureRecord.Id})
 			if err != nil {
 				log.Fatalf("Unable to find puzzle: %s\n", err)
@@ -223,20 +209,64 @@ func updateAdventures(app *pocketbase.PocketBase, adventures []*adventure) {
 			if err != nil {
 				log.Fatalf("Unable to save puzzle: %s\n", err)
 			}
-			fmt.Printf("Puzzle saved: %s\n", puzzleRecord.Get("title"))
-			//for k := range adventures[i].puzzles[j].answers {
-			//	fmt.Printf("Adding hint for %s: %s - %s", adventures[i].name, adventures[i].puzzles[k].name, adventures[i].puzzles[j].answers[k])
-			//}
-			//for k := range adventures[i].puzzles[j].hints {
-			//	fmt.Printf("Adding hint for %s: %s - %s", adventures[i].name, adventures[i].puzzles[k].name, adventures[i].puzzles[j].hints[k])
-			//}
+			for k := range adventures[i].puzzles[j].answers {
+				answerRecords, err := app.Dao().FindRecordsByExpr("answers", dbx.HashExp{"puzzle": puzzleRecord.Id, "content": adventures[i].puzzles[j].answers[k]})
+				if err != nil {
+					log.Fatalf("Unable to find answer: %s\n", err)
+				}
+				var answerRecord *models.Record
+				if len(answerRecords) == 0 {
+					collection, err := app.Dao().FindCollectionByNameOrId("answers")
+					if err != nil {
+						log.Fatalf("Unable to find answers collection: %s\n", err)
+					}
+					answerRecord = models.NewRecord(collection)
+					answerRecord.RefreshId()
+				} else {
+					answerRecord = answerRecords[0]
+				}
+				answerRecord.Set("puzzle", puzzleRecord.Id)
+				answerRecord.Set("content", adventures[i].puzzles[j].answers[k])
+				err = app.Dao().SaveRecord(answerRecord)
+				if err != nil {
+					log.Fatalf("Unable to save answer: %s\n", err)
+				}
+			}
+			for k := range adventures[i].puzzles[j].hints {
+				hintRecords, err := app.Dao().FindRecordsByExpr("hints", dbx.HashExp{
+					"puzzle":  puzzleRecord.Id,
+					"title":   adventures[i].puzzles[j].hints[k][0],
+					"message": adventures[i].puzzles[j].hints[k][1],
+				})
+				if err != nil {
+					log.Fatalf("Unable to find hint: %s\n", err)
+				}
+				var hintRecord *models.Record
+				if len(hintRecords) == 0 {
+					collection, err := app.Dao().FindCollectionByNameOrId("hints")
+					if err != nil {
+						log.Fatalf("Unable to find hints collection: %s\n", err)
+					}
+					hintRecord = models.NewRecord(collection)
+					hintRecord.RefreshId()
+				} else {
+					hintRecord = hintRecords[0]
+				}
+				hintRecord.Set("puzzle", puzzleRecord.Id)
+				hintRecord.Set("title", adventures[i].puzzles[j].hints[k][0])
+				hintRecord.Set("message", adventures[i].puzzles[j].hints[k][1])
+				hintRecord.Set("order", k)
+				err = app.Dao().SaveRecord(hintRecord)
+				if err != nil {
+					log.Fatalf("Unable to save hints: %s\n", err)
+				}
+			}
 			if j == 0 {
 				adventureRecord.Set("firstpuzzle", puzzleRecord.Id)
 				err = app.Dao().SaveRecord(adventureRecord)
 				if err != nil {
 					log.Fatalf("Unable to update firstPuzzle: %s\n", err)
 				}
-				fmt.Printf("Updated first puzzle: %s\n", puzzleRecord.Id)
 			}
 		}
 	}
