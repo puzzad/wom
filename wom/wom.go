@@ -54,6 +54,7 @@ func createBeforeGuessCreatedHook(app *pocketbase.PocketBase) func(e *core.Recor
 
 func createGuessCreatedHook(app *pocketbase.PocketBase) func(e *core.RecordCreateEvent) error {
 	return func(e *core.RecordCreateEvent) error {
+		webhookURL, _ := app.RootCmd.Flags().GetString("webhook-url")
 		game, err := app.Dao().FindRecordById("games", e.Record.Get("game").(string))
 		if err != nil {
 			return err
@@ -63,7 +64,6 @@ func createGuessCreatedHook(app *pocketbase.PocketBase) func(e *core.RecordCreat
 			return err
 		}
 		if e.Record.Get("correct").(bool) {
-			webhookURL, _ := app.RootCmd.Flags().GetString("webhook-url")
 			sendWebhook(webhookURL, fmt.Sprintf(":tada: %s/%s: %s", game.Get("username"), puzzle.Get("title"), e.Record.Get("content")))
 			if puzzle.Get("next") == "" {
 				game.Set("puzzle", nil)
@@ -72,8 +72,10 @@ func createGuessCreatedHook(app *pocketbase.PocketBase) func(e *core.RecordCreat
 			} else {
 				game.Set("puzzle", puzzle.Get("next"))
 			}
+			return app.Dao().SaveRecord(game)
 		}
-		return app.Dao().SaveRecord(game)
+		sendWebhook(webhookURL, fmt.Sprintf(":x: %s/%s: %s", game.Get("username"), puzzle.Get("title"), e.Record.Get("content")))
+		return nil
 	}
 }
 
