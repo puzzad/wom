@@ -269,6 +269,28 @@ func updateAdventures(app *pocketbase.PocketBase, adventures []*adventure) {
 				}
 			}
 		}
+		allPuzzlesSlice, err := app.Dao().FindRecordsByExpr("puzzles", dbx.HashExp{"adventure": adventureRecord.Id})
+		if err != nil {
+			log.Fatalf("Unable to update puzzle order: %s", err)
+		}
+		idMap := make(map[string]string)
+		nextMap := make(map[string]string)
+		for i := range allPuzzlesSlice {
+			idMap[allPuzzlesSlice[i].Get("title").(string)] = allPuzzlesSlice[i].Id
+		}
+		for j := range adventures[i].puzzles {
+			if j > 0 {
+				nextMap[adventures[i].puzzles[j-1].name] = idMap[adventures[i].puzzles[j].name]
+			}
+		}
+		for j := range allPuzzlesSlice {
+			allPuzzlesSlice[j].Set("next", nextMap[allPuzzlesSlice[j].Get("title").(string)])
+			err = app.Dao().SaveRecord(allPuzzlesSlice[j])
+			if err != nil {
+				//log.Fatalf("Unable to update puzzle order: %s", err)
+				panic(err)
+			}
+		}
 	}
 }
 
@@ -514,14 +536,6 @@ func checkPuzzle(zfs fs.FS, folder string) puzzle {
 		answers: answers,
 		hints:   hints,
 		files:   nil,
-	}
-}
-
-func updatePuzzleOrder(puzzles []puzzle) {
-	for i := range puzzles {
-		if i > 0 {
-			puzzles[i-1].next = puzzles[i].slug
-		}
 	}
 }
 
