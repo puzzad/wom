@@ -13,9 +13,84 @@ func init() {
 	m.Register(func(db dbx.Builder) error {
 		jsonData := `[
 			{
+				"id": "_pb_users_auth_",
+				"created": "2023-07-08 16:24:45.083Z",
+				"updated": "2023-07-08 16:30:10.637Z",
+				"name": "users",
+				"type": "auth",
+				"system": false,
+				"schema": [
+					{
+						"system": false,
+						"id": "users_name",
+						"name": "name",
+						"type": "text",
+						"required": false,
+						"unique": false,
+						"options": {
+							"min": null,
+							"max": null,
+							"pattern": ""
+						}
+					},
+					{
+						"system": false,
+						"id": "users_avatar",
+						"name": "avatar",
+						"type": "file",
+						"required": false,
+						"unique": false,
+						"options": {
+							"maxSelect": 1,
+							"maxSize": 5242880,
+							"mimeTypes": [
+								"image/jpeg",
+								"image/png",
+								"image/svg+xml",
+								"image/gif",
+								"image/webp"
+							],
+							"thumbs": null,
+							"protected": false
+						}
+					},
+					{
+						"system": false,
+						"id": "0rywdkyy",
+						"name": "games",
+						"type": "relation",
+						"required": false,
+						"unique": false,
+						"options": {
+							"collectionId": "vztgyvjzre4vxaf",
+							"cascadeDelete": false,
+							"minSelect": null,
+							"maxSelect": null,
+							"displayFields": []
+						}
+					}
+				],
+				"indexes": [],
+				"listRule": "id = @request.auth.id",
+				"viewRule": "id = @request.auth.id",
+				"createRule": "",
+				"updateRule": "id = @request.auth.id",
+				"deleteRule": "id = @request.auth.id",
+				"options": {
+					"allowEmailAuth": true,
+					"allowOAuth2Auth": true,
+					"allowUsernameAuth": false,
+					"exceptEmailDomains": null,
+					"manageRule": null,
+					"minPasswordLength": 8,
+					"onlyEmailDomains": null,
+					"requireEmail": true
+				}
+			},
+			{
 				"id": "8480lghxmlrhtn6",
-				"created": "2023-06-26 19:53:11.369Z",
-				"updated": "2023-06-29 20:11:18.444Z",
+				"created": "2023-07-08 16:30:10.635Z",
+				"updated": "2023-07-08 16:30:10.635Z",
 				"name": "hints",
 				"type": "base",
 				"system": false,
@@ -84,8 +159,8 @@ func init() {
 			},
 			{
 				"id": "mlrnksy9yxm2dmv",
-				"created": "2023-06-26 19:53:51.292Z",
-				"updated": "2023-06-29 20:11:18.444Z",
+				"created": "2023-07-08 16:30:10.635Z",
+				"updated": "2023-07-08 16:30:10.635Z",
 				"name": "mailinglist",
 				"type": "base",
 				"system": false,
@@ -126,8 +201,8 @@ func init() {
 			},
 			{
 				"id": "t6dabzlosjg7sdb",
-				"created": "2023-06-26 19:54:33.247Z",
-				"updated": "2023-06-29 21:18:48.907Z",
+				"created": "2023-07-08 16:30:10.636Z",
+				"updated": "2023-07-08 16:30:10.636Z",
 				"name": "usedhints",
 				"type": "base",
 				"system": false,
@@ -185,8 +260,8 @@ func init() {
 			},
 			{
 				"id": "dsyy96h6bthpiev",
-				"created": "2023-06-26 19:55:28.099Z",
-				"updated": "2023-06-29 20:11:18.444Z",
+				"created": "2023-07-08 16:30:10.636Z",
+				"updated": "2023-07-08 16:30:10.636Z",
 				"name": "adventures",
 				"type": "base",
 				"system": false,
@@ -299,8 +374,8 @@ func init() {
 			},
 			{
 				"id": "pcfz1rdnine760h",
-				"created": "2023-06-26 19:58:21.418Z",
-				"updated": "2023-06-29 22:05:11.098Z",
+				"created": "2023-07-08 16:30:10.636Z",
+				"updated": "2023-07-08 16:30:10.636Z",
 				"name": "guesses",
 				"type": "base",
 				"system": false,
@@ -368,8 +443,8 @@ func init() {
 			},
 			{
 				"id": "k5593ds7n07c487",
-				"created": "2023-06-26 19:58:51.790Z",
-				"updated": "2023-06-29 21:51:59.418Z",
+				"created": "2023-07-08 16:30:10.636Z",
+				"updated": "2023-07-08 16:30:10.636Z",
 				"name": "puzzles",
 				"type": "base",
 				"system": false,
@@ -455,8 +530,8 @@ func init() {
 			},
 			{
 				"id": "vztgyvjzre4vxaf",
-				"created": "2023-06-29 21:16:45.535Z",
-				"updated": "2023-06-29 21:30:09.792Z",
+				"created": "2023-07-08 16:30:10.636Z",
+				"updated": "2023-07-08 16:30:10.636Z",
 				"name": "games",
 				"type": "auth",
 				"system": false,
@@ -566,27 +641,12 @@ func init() {
 			},
 			{
 				"id": "03oa5ildtnmrxsn",
-				"created": "2023-06-29 22:42:12.279Z",
-				"updated": "2023-06-29 22:42:12.279Z",
+				"created": "2023-07-08 16:30:10.637Z",
+				"updated": "2023-07-08 17:30:35.940Z",
 				"name": "answers",
 				"type": "base",
 				"system": false,
 				"schema": [
-					{
-						"system": false,
-						"id": "c6jkot5j",
-						"name": "game",
-						"type": "relation",
-						"required": false,
-						"unique": false,
-						"options": {
-							"collectionId": "vztgyvjzre4vxaf",
-							"cascadeDelete": false,
-							"minSelect": null,
-							"maxSelect": 1,
-							"displayFields": []
-						}
-					},
 					{
 						"system": false,
 						"id": "jyt3mvz0",
@@ -623,81 +683,6 @@ func init() {
 				"updateRule": null,
 				"deleteRule": null,
 				"options": {}
-			},
-			{
-				"id": "_pb_users_auth_",
-				"created": "2023-07-02 10:09:30.448Z",
-				"updated": "2023-07-02 10:09:30.449Z",
-				"name": "users",
-				"type": "auth",
-				"system": false,
-				"schema": [
-					{
-						"system": false,
-						"id": "users_name",
-						"name": "name",
-						"type": "text",
-						"required": false,
-						"unique": false,
-						"options": {
-							"min": null,
-							"max": null,
-							"pattern": ""
-						}
-					},
-					{
-						"system": false,
-						"id": "users_avatar",
-						"name": "avatar",
-						"type": "file",
-						"required": false,
-						"unique": false,
-						"options": {
-							"maxSelect": 1,
-							"maxSize": 5242880,
-							"mimeTypes": [
-								"image/jpeg",
-								"image/png",
-								"image/svg+xml",
-								"image/gif",
-								"image/webp"
-							],
-							"thumbs": null,
-							"protected": false
-						}
-					},
-					{
-						"system": false,
-						"id": "0rywdkyy",
-						"name": "games",
-						"type": "relation",
-						"required": false,
-						"unique": false,
-						"options": {
-							"collectionId": "vztgyvjzre4vxaf",
-							"cascadeDelete": false,
-							"minSelect": null,
-							"maxSelect": null,
-							"displayFields": []
-						}
-					}
-				],
-				"indexes": [],
-				"listRule": "id = @request.auth.id",
-				"viewRule": "id = @request.auth.id",
-				"createRule": "",
-				"updateRule": "id = @request.auth.id",
-				"deleteRule": "id = @request.auth.id",
-				"options": {
-					"allowEmailAuth": true,
-					"allowOAuth2Auth": true,
-					"allowUsernameAuth": false,
-					"exceptEmailDomains": null,
-					"manageRule": null,
-					"minPasswordLength": 8,
-					"onlyEmailDomains": null,
-					"requireEmail": true
-				}
 			}
 		]`
 
