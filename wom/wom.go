@@ -287,8 +287,7 @@ func updateAdventures(app *pocketbase.PocketBase, adventures []*adventure) {
 			allPuzzlesSlice[j].Set("next", nextMap[allPuzzlesSlice[j].Get("title").(string)])
 			err = app.Dao().SaveRecord(allPuzzlesSlice[j])
 			if err != nil {
-				//log.Fatalf("Unable to update puzzle order: %s", err)
-				panic(err)
+				log.Fatalf("Unable to update puzzle order: %s", err)
 			}
 		}
 	}
