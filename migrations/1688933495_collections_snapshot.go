@@ -13,81 +13,6 @@ func init() {
 	m.Register(func(db dbx.Builder) error {
 		jsonData := `[
 			{
-				"id": "_pb_users_auth_",
-				"created": "2023-07-08 16:24:45.083Z",
-				"updated": "2023-07-08 16:30:10.637Z",
-				"name": "users",
-				"type": "auth",
-				"system": false,
-				"schema": [
-					{
-						"system": false,
-						"id": "users_name",
-						"name": "name",
-						"type": "text",
-						"required": false,
-						"unique": false,
-						"options": {
-							"min": null,
-							"max": null,
-							"pattern": ""
-						}
-					},
-					{
-						"system": false,
-						"id": "users_avatar",
-						"name": "avatar",
-						"type": "file",
-						"required": false,
-						"unique": false,
-						"options": {
-							"maxSelect": 1,
-							"maxSize": 5242880,
-							"mimeTypes": [
-								"image/jpeg",
-								"image/png",
-								"image/svg+xml",
-								"image/gif",
-								"image/webp"
-							],
-							"thumbs": null,
-							"protected": false
-						}
-					},
-					{
-						"system": false,
-						"id": "0rywdkyy",
-						"name": "games",
-						"type": "relation",
-						"required": false,
-						"unique": false,
-						"options": {
-							"collectionId": "vztgyvjzre4vxaf",
-							"cascadeDelete": false,
-							"minSelect": null,
-							"maxSelect": null,
-							"displayFields": []
-						}
-					}
-				],
-				"indexes": [],
-				"listRule": "id = @request.auth.id",
-				"viewRule": "id = @request.auth.id",
-				"createRule": "",
-				"updateRule": "id = @request.auth.id",
-				"deleteRule": "id = @request.auth.id",
-				"options": {
-					"allowEmailAuth": true,
-					"allowOAuth2Auth": true,
-					"allowUsernameAuth": false,
-					"exceptEmailDomains": null,
-					"manageRule": null,
-					"minPasswordLength": 8,
-					"onlyEmailDomains": null,
-					"requireEmail": true
-				}
-			},
-			{
 				"id": "8480lghxmlrhtn6",
 				"created": "2023-07-08 16:30:10.635Z",
 				"updated": "2023-07-08 16:30:10.635Z",
@@ -675,14 +600,14 @@ func init() {
 			{
 				"id": "djlovsu233v2617",
 				"created": "2023-07-08 23:24:57.624Z",
-				"updated": "2023-07-08 23:46:19.381Z",
+				"updated": "2023-07-09 00:20:19.024Z",
 				"name": "currenthints",
 				"type": "view",
 				"system": false,
 				"schema": [
 					{
 						"system": false,
-						"id": "cvbeqqwq",
+						"id": "xhqs5rrd",
 						"name": "title",
 						"type": "text",
 						"required": false,
@@ -695,7 +620,7 @@ func init() {
 					},
 					{
 						"system": false,
-						"id": "zhdrt8rd",
+						"id": "mz1rfeo0",
 						"name": "message",
 						"type": "json",
 						"required": false,
@@ -704,7 +629,7 @@ func init() {
 					},
 					{
 						"system": false,
-						"id": "w8oe1i0a",
+						"id": "gkquqkon",
 						"name": "locked",
 						"type": "json",
 						"required": false,
@@ -713,7 +638,7 @@ func init() {
 					},
 					{
 						"system": false,
-						"id": "islksdnw",
+						"id": "pqr4zp7z",
 						"name": "puzzleid",
 						"type": "relation",
 						"required": false,
@@ -735,6 +660,159 @@ func init() {
 				"deleteRule": null,
 				"options": {
 					"query": "select hints.id as id, hints.title as title, iif(usedhints.id ISNULL, '', hints.message) as message, iif(usedhints.id ISNULL, true, false) as locked, hints.puzzle as puzzleid\nfrom hints\nleft join usedhints on hints.id = usedhints.hint"
+				}
+			},
+			{
+				"id": "_pb_users_auth_",
+				"created": "2023-07-09 00:20:19.016Z",
+				"updated": "2023-07-09 00:20:19.019Z",
+				"name": "users",
+				"type": "auth",
+				"system": false,
+				"schema": [
+					{
+						"system": false,
+						"id": "users_name",
+						"name": "name",
+						"type": "text",
+						"required": false,
+						"unique": false,
+						"options": {
+							"min": null,
+							"max": null,
+							"pattern": ""
+						}
+					},
+					{
+						"system": false,
+						"id": "users_avatar",
+						"name": "avatar",
+						"type": "file",
+						"required": false,
+						"unique": false,
+						"options": {
+							"maxSelect": 1,
+							"maxSize": 5242880,
+							"mimeTypes": [
+								"image/jpeg",
+								"image/png",
+								"image/svg+xml",
+								"image/gif",
+								"image/webp"
+							],
+							"thumbs": null,
+							"protected": false
+						}
+					},
+					{
+						"system": false,
+						"id": "0rywdkyy",
+						"name": "games",
+						"type": "relation",
+						"required": false,
+						"unique": false,
+						"options": {
+							"collectionId": "vztgyvjzre4vxaf",
+							"cascadeDelete": false,
+							"minSelect": null,
+							"maxSelect": null,
+							"displayFields": []
+						}
+					}
+				],
+				"indexes": [],
+				"listRule": "id = @request.auth.id",
+				"viewRule": "id = @request.auth.id",
+				"createRule": "",
+				"updateRule": "id = @request.auth.id",
+				"deleteRule": "id = @request.auth.id",
+				"options": {
+					"allowEmailAuth": true,
+					"allowOAuth2Auth": true,
+					"allowUsernameAuth": false,
+					"exceptEmailDomains": null,
+					"manageRule": null,
+					"minPasswordLength": 8,
+					"onlyEmailDomains": null,
+					"requireEmail": true
+				}
+			},
+			{
+				"id": "54fmr4z92ksrbwy",
+				"created": "2023-07-09 19:06:47.721Z",
+				"updated": "2023-07-09 20:08:35.290Z",
+				"name": "solvetimes",
+				"type": "view",
+				"system": false,
+				"schema": [
+					{
+						"system": false,
+						"id": "ueekaaww",
+						"name": "title",
+						"type": "text",
+						"required": false,
+						"unique": false,
+						"options": {
+							"min": null,
+							"max": null,
+							"pattern": ""
+						}
+					},
+					{
+						"system": false,
+						"id": "t7ustcbe",
+						"name": "timeSolved",
+						"type": "json",
+						"required": false,
+						"unique": false,
+						"options": {}
+					},
+					{
+						"system": false,
+						"id": "xo7nhtxg",
+						"name": "gameStart",
+						"type": "date",
+						"required": false,
+						"unique": false,
+						"options": {
+							"min": "",
+							"max": ""
+						}
+					},
+					{
+						"system": false,
+						"id": "zdp0onu4",
+						"name": "gameCode",
+						"type": "text",
+						"required": false,
+						"unique": false,
+						"options": {
+							"min": null,
+							"max": null,
+							"pattern": ""
+						}
+					},
+					{
+						"system": false,
+						"id": "weczocja",
+						"name": "usedhints",
+						"type": "number",
+						"required": false,
+						"unique": false,
+						"options": {
+							"min": null,
+							"max": null
+						}
+					}
+				],
+				"indexes": [],
+				"listRule": "@request.auth.username = gameCode",
+				"viewRule": null,
+				"createRule": null,
+				"updateRule": null,
+				"deleteRule": null,
+				"options": {
+					"query": "select guesses.id, puzzles.title, max(guesses.created) as timeSolved, games.start as gameStart, games.username as gameCode, count(usedhints.id) as usedhints\nfrom guesses\n         left join puzzles on guesses.puzzle = puzzles.id\n         left join games on guesses.game = games.id\n         left join hints on hints.puzzle = puzzles.id\n         left join usedhints on games.id = usedhints.game AND usedhints.game = games.id and usedhints.hint = hints.id\nwhere correct=true\nGROUP BY puzzles.id, games.username\norder by timeSolved"
 				}
 			}
 		]`
