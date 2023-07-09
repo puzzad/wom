@@ -18,6 +18,7 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"io"
 	"io/fs"
 	"log"
@@ -32,10 +33,12 @@ import (
 )
 
 func ConfigurePocketBase(app *pocketbase.PocketBase) {
+	viper.SetEnvPrefix("")
+	viper.AutomaticEnv()
 	serveCmd := cmd.NewServeCommand(app, true)
-	serveCmd.PersistentFlags().StringP("email", "e", "", "Sets the initial admin email")
-	serveCmd.PersistentFlags().StringP("password", "p", "", "Sets the initial admin password")
-	serveCmd.PersistentFlags().StringP("webhook-url", "w", "", "Webhook to send events to {'content': 'message'}")
+	serveCmd.PersistentFlags().StringP("email", "e", viper.GetString("EMAIL"), "Sets the initial admin email")
+	serveCmd.PersistentFlags().StringP("password", "p", viper.GetString("PASSWORD"), "Sets the initial admin password")
+	serveCmd.PersistentFlags().StringP("webhook-url", "w", viper.GetString("WEBHOOK_URL"), "Webhook to send events to {'content': 'message'}")
 	app.RootCmd.AddCommand(serveCmd)
 	app.RootCmd.AddCommand(NewImportCmd(app))
 	app.OnBeforeServe().Add(createAdminAccountHook(serveCmd))

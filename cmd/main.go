@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
+	_ "github.com/puzzad/wom/migrations"
 	"github.com/puzzad/wom/wom"
 	"log"
 )
