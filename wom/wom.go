@@ -469,6 +469,7 @@ func startAdventure(app *pocketbase.PocketBase) func(echo.Context) error {
 		code := acaGen.Generate()
 		record := models.NewRecord(collection)
 		form := forms.NewRecordUpsert(app, record)
+		record.RefreshId()
 		err = form.LoadData(map[string]any{
 			"status":          "PAID",
 			"user":            user.Id,
@@ -480,6 +481,14 @@ func startAdventure(app *pocketbase.PocketBase) func(echo.Context) error {
 		if err = form.Submit(); err != nil {
 			fmt.Printf("Unable to add Adventure: %v\n", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to add adventure"})
+		}
+		currentGames := user.GetStringSlice("games")
+		currentGames = append(currentGames, record.Id)
+		user.Set("games", currentGames)
+		err = app.Dao().SaveRecord(user)
+		if err != nil {
+			fmt.Printf("Unable to add Adventure: %v\n", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to add game to user"})
 		}
 		return c.JSON(http.StatusOK, map[string]string{"code": code})
 	}
