@@ -2,55 +2,12 @@ package wom
 
 import (
 	"fmt"
-	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/mailer"
-	"net/http"
 	"net/mail"
 	"strings"
 )
-
-func sendContactForm(app *pocketbase.PocketBase) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		type req struct {
-			Token   string
-			Name    string
-			Email   string
-			Message string
-		}
-		var data = req{}
-		if err := c.Bind(&data); err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
-		}
-		if strings.TrimSpace(data.Name) == "" {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
-		}
-		if strings.TrimSpace(data.Message) == "" {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
-		}
-		authInfo, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
-		email := ""
-		if authInfo != nil && authInfo.Verified() {
-			email = authInfo.Email()
-		}
-		if data.Email != email {
-			secretKey, _ := app.RootCmd.Flags().GetString("hcaptchaSecretKey")
-			siteKey, _ := app.RootCmd.Flags().GetString("hcaptchaSiteKey")
-			if err := checkCaptcha(siteKey, secretKey, data.Token); err != nil {
-				return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
-			}
-			if !validEmail(data.Email) {
-				return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
-			}
-		}
-		if err := SendContactFormMail(app, data.Email, data.Name, data.Message); err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
-		}
-		return c.NoContent(http.StatusNoContent)
-	}
-}
 
 func SendContactFormMail(app *pocketbase.PocketBase, email string, name string, content string) error {
 	message := &mailer.Message{
