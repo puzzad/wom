@@ -15,8 +15,10 @@ func main() {
 	migratecmd.MustRegister(app, app.RootCmd, &migratecmd.Options{
 		Automigrate: true,
 	})
-	wom.ConfigurePocketBase(app)
-	if err := app.Start(); err != nil {
+	if err := wom.ConfigurePocketBase(app); err != nil {
+		log.Fatal(err)
+	}
+	if err := app.Execute(); err != nil {
 		log.Fatal(err)
 	}
 }

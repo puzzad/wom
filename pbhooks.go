@@ -6,6 +6,7 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/cmd"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/spf13/cobra"
@@ -13,26 +14,52 @@ import (
 	"time"
 )
 
-func ConfigurePocketBase(app *pocketbase.PocketBase) {
+func ConfigurePocketBase(app *pocketbase.PocketBase) error {
 	viper.SetEnvPrefix("")
 	viper.AutomaticEnv()
 	serveCmd := cmd.NewServeCommand(app, true)
-	serveCmd.PersistentFlags().StringP("email", "e", viper.GetString("EMAIL"), "Sets the initial admin email")
-	serveCmd.PersistentFlags().StringP("password", "p", viper.GetString("PASSWORD"), "Sets the initial admin password")
-	serveCmd.PersistentFlags().StringP("webhook-url", "w", viper.GetString("WEBHOOK_URL"), "Webhook to send events to {'content': 'message'}")
-	serveCmd.PersistentFlags().StringP("hcaptchaSecretKey", "", viper.GetString("HCAPTCHA_SECRET_KEY"), "Secret key to use for hCaptcha")
-	serveCmd.PersistentFlags().StringP("hCaptchaSiteKey", "", viper.GetString("HCAPTCHA_SITE_KEY"), "Site key to use for hCaptcha")
-	serveCmd.PersistentFlags().StringP("mailinglistSecretKey", "", viper.GetString("MAILINGLIST_SECRET_KEY"), "Mailing list secret key")
-	_ = serveCmd.MarkFlagRequired("hcaptchaSecretKey")
-	_ = serveCmd.MarkFlagRequired("hCaptchaSiteKey")
-	_ = serveCmd.MarkFlagRequired("mailinglistSecretKey")
+	serveCmd.Flags().StringP("email", "e", viper.GetString("EMAIL"), "Sets the initial admin email")
+	serveCmd.Flags().StringP("password", "p", viper.GetString("PASSWORD"), "Sets the initial admin password")
+	serveCmd.Flags().StringP("webhook-url", "w", viper.GetString("WEBHOOK_URL"), "Webhook to send events to {'content': 'message'}")
+	serveCmd.Flags().StringP("hcaptchaSecretKey", "", viper.GetString("HCAPTCHA_SECRET_KEY"), "Secret key to use for hCaptcha")
+	serveCmd.Flags().StringP("hCaptchaSiteKey", "", viper.GetString("HCAPTCHA_SITE_KEY"), "Site key to use for hCaptcha")
+	serveCmd.Flags().StringP("mailinglistSecretKey", "", viper.GetString("MAILINGLIST_SECRET_KEY"), "Mailing list secret key")
+	err := serveCmd.MarkFlagRequired("hcaptchaSecretKey")
+	if err != nil {
+		return err
+	}
+	err = serveCmd.MarkFlagRequired("hCaptchaSiteKey")
+	if err != nil {
+		return err
+	}
+	err = serveCmd.MarkFlagRequired("mailinglistSecretKey")
+	if err != nil {
+		return err
+	}
 	app.RootCmd.AddCommand(serveCmd)
+	app.RootCmd.AddCommand(cmd.NewAdminCommand(app))
+	app.OnAfterBootstrap().Add(func(e *core.BootstrapEvent) error {
+		return settings(app)
+	})
 	app.OnBeforeServe().Add(createAdminAccountHook(serveCmd))
 	app.OnBeforeServe().Add(createWomRoutesHook(app))
 	app.OnRecordBeforeUpdateRequest("adventures").Add(createPreserveFilenameUpdateHook)
 	app.OnRecordBeforeCreateRequest("adventures").Add(createPreserveFilenameCreateHook)
 	app.OnRecordBeforeCreateRequest("guesses").Add(createBeforeGuessCreatedHook(app))
 	app.OnRecordAfterCreateRequest("guesses").Add(createGuessCreatedHook(app))
+	return nil
+}
+
+func settings(app *pocketbase.PocketBase) error {
+	key, _ := app.RootCmd.Flags().GetString("hcaptchaSecretKey")
+	form := forms.NewSettingsUpsert(app)
+	form.Meta.AppName = "Puzzad"
+	form.Meta.AppUrl = "http://localhost.puzzad.com:8090"
+	form.Meta.HideControls = true
+	form.Logs.MaxDays = 90
+	form.Smtp.Host = key
+
+	return form.Submit()
 }
 
 func preserveOriginalFilenames(uploadedFiles map[string][]*filesystem.File, record *models.Record) error {
