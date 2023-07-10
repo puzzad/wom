@@ -27,7 +27,6 @@ func ConfigurePocketBase(app *pocketbase.PocketBase) {
 	_ = serveCmd.MarkFlagRequired("hCaptchaSiteKey")
 	_ = serveCmd.MarkFlagRequired("mailinglistSecretKey")
 	app.RootCmd.AddCommand(serveCmd)
-	app.RootCmd.AddCommand(NewImportCmd(app))
 	app.OnBeforeServe().Add(createAdminAccountHook(serveCmd))
 	app.OnBeforeServe().Add(createWomRoutesHook(app))
 	app.OnRecordBeforeUpdateRequest("adventures").Add(createPreserveFilenameUpdateHook)
