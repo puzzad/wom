@@ -55,7 +55,9 @@ func main() {
 	}
 	wom.ConfigurePocketBase(app, app.Dao(), app.NewMailClient(), app.Settings().Meta.SenderName,
 		app.Settings().Meta.SenderAddress, *hcaptchatSecretKey, *hcaptchaSiteKey, *mailinglistSecretKey, *webhookURL)
-	serveCmd := cmd.NewServeCommand(app, true)
+	serveCmd := cmd.NewServeCommand(app, false)
+	serveCmd.SetArgs([]string{"--http=0.0.0.0:8090"})
+	log.Printf("Starting wom: http://0.0.0.0:8090/_/")
 	if err := serveCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
