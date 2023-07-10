@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/daos"
 	"github.com/pocketbase/pocketbase/models"
+	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"io/fs"
 	"log"
 	"net/http"
@@ -17,8 +18,12 @@ import (
 	"strings"
 )
 
-func updateAdventures(app *pocketbase.PocketBase, adventures []*adventure) {
-	puzzlesfs, err := app.NewFilesystem()
+type fileSystemOpener interface {
+	NewFilesystem() (*filesystem.System, error)
+}
+
+func updateAdventures(db *daos.Dao, fso fileSystemOpener, adventures []*adventure) {
+	puzzlesfs, err := fso.NewFilesystem()
 	defer func() {
 		_ = puzzlesfs.Close()
 	}()
@@ -26,9 +31,9 @@ func updateAdventures(app *pocketbase.PocketBase, adventures []*adventure) {
 		log.Fatalf("Unable to get filesystem: %s", err)
 	}
 	for i := range adventures {
-		adventureRecord, err := app.Dao().FindFirstRecordByData("adventures", "name", adventures[i].name)
+		adventureRecord, err := db.FindFirstRecordByData("adventures", "name", adventures[i].name)
 		if err != nil {
-			collection, err := app.Dao().FindCollectionByNameOrId("adventures")
+			collection, err := db.FindCollectionByNameOrId("adventures")
 			if err != nil {
 				log.Fatalf("Unable to find adventures collection: %s\n", err)
 			}
@@ -54,18 +59,18 @@ func updateAdventures(app *pocketbase.PocketBase, adventures []*adventure) {
 				log.Fatalf("Unable to upload logo: %s", err)
 			}
 		}
-		err = app.Dao().SaveRecord(adventureRecord)
+		err = db.SaveRecord(adventureRecord)
 		if err != nil {
 			log.Fatalf("Unable to save adventure: %s\n", err)
 		}
 		for j := range adventures[i].puzzles {
-			puzzleRecords, err := app.Dao().FindRecordsByExpr("puzzles", dbx.HashExp{"title": adventures[i].puzzles[j].name, "adventure": adventureRecord.Id})
+			puzzleRecords, err := db.FindRecordsByExpr("puzzles", dbx.HashExp{"title": adventures[i].puzzles[j].name, "adventure": adventureRecord.Id})
 			if err != nil {
 				log.Fatalf("Unable to find puzzle: %s\n", err)
 			}
 			var puzzleRecord *models.Record
 			if len(puzzleRecords) == 0 {
-				collection, err := app.Dao().FindCollectionByNameOrId("puzzles")
+				collection, err := db.FindCollectionByNameOrId("puzzles")
 				if err != nil {
 					log.Fatalf("Unable to find puzzles collection: %s\n", err)
 				}
@@ -79,18 +84,18 @@ func updateAdventures(app *pocketbase.PocketBase, adventures []*adventure) {
 			puzzleRecord.Set("information", adventures[i].puzzles[j].info)
 			puzzleRecord.Set("story", adventures[i].puzzles[j].story)
 			puzzleRecord.Set("puzzle", adventures[i].puzzles[j].text)
-			err = app.Dao().SaveRecord(puzzleRecord)
+			err = db.SaveRecord(puzzleRecord)
 			if err != nil {
 				log.Fatalf("Unable to save puzzle: %s\n", err)
 			}
 			for k := range adventures[i].puzzles[j].answers {
-				answerRecords, err := app.Dao().FindRecordsByExpr("answers", dbx.HashExp{"puzzle": puzzleRecord.Id, "content": adventures[i].puzzles[j].answers[k]})
+				answerRecords, err := db.FindRecordsByExpr("answers", dbx.HashExp{"puzzle": puzzleRecord.Id, "content": adventures[i].puzzles[j].answers[k]})
 				if err != nil {
 					log.Fatalf("Unable to find answer: %s\n", err)
 				}
 				var answerRecord *models.Record
 				if len(answerRecords) == 0 {
-					collection, err := app.Dao().FindCollectionByNameOrId("answers")
+					collection, err := db.FindCollectionByNameOrId("answers")
 					if err != nil {
 						log.Fatalf("Unable to find answers collection: %s\n", err)
 					}
@@ -101,13 +106,13 @@ func updateAdventures(app *pocketbase.PocketBase, adventures []*adventure) {
 				}
 				answerRecord.Set("puzzle", puzzleRecord.Id)
 				answerRecord.Set("content", adventures[i].puzzles[j].answers[k])
-				err = app.Dao().SaveRecord(answerRecord)
+				err = db.SaveRecord(answerRecord)
 				if err != nil {
 					log.Fatalf("Unable to save answer: %s\n", err)
 				}
 			}
 			for k := range adventures[i].puzzles[j].hints {
-				hintRecords, err := app.Dao().FindRecordsByExpr("hints", dbx.HashExp{
+				hintRecords, err := db.FindRecordsByExpr("hints", dbx.HashExp{
 					"puzzle":  puzzleRecord.Id,
 					"title":   adventures[i].puzzles[j].hints[k][0],
 					"message": adventures[i].puzzles[j].hints[k][1],
@@ -117,7 +122,7 @@ func updateAdventures(app *pocketbase.PocketBase, adventures []*adventure) {
 				}
 				var hintRecord *models.Record
 				if len(hintRecords) == 0 {
-					collection, err := app.Dao().FindCollectionByNameOrId("hints")
+					collection, err := db.FindCollectionByNameOrId("hints")
 					if err != nil {
 						log.Fatalf("Unable to find hints collection: %s\n", err)
 					}
@@ -130,20 +135,20 @@ func updateAdventures(app *pocketbase.PocketBase, adventures []*adventure) {
 				hintRecord.Set("title", adventures[i].puzzles[j].hints[k][0])
 				hintRecord.Set("message", adventures[i].puzzles[j].hints[k][1])
 				hintRecord.Set("order", k)
-				err = app.Dao().SaveRecord(hintRecord)
+				err = db.SaveRecord(hintRecord)
 				if err != nil {
 					log.Fatalf("Unable to save hints: %s\n", err)
 				}
 			}
 			if j == 0 {
 				adventureRecord.Set("firstpuzzle", puzzleRecord.Id)
-				err = app.Dao().SaveRecord(adventureRecord)
+				err = db.SaveRecord(adventureRecord)
 				if err != nil {
 					log.Fatalf("Unable to update firstPuzzle: %s\n", err)
 				}
 			}
 		}
-		allPuzzlesSlice, err := app.Dao().FindRecordsByExpr("puzzles", dbx.HashExp{"adventure": adventureRecord.Id})
+		allPuzzlesSlice, err := db.FindRecordsByExpr("puzzles", dbx.HashExp{"adventure": adventureRecord.Id})
 		if err != nil {
 			log.Fatalf("Unable to update puzzle order: %s", err)
 		}
@@ -159,7 +164,7 @@ func updateAdventures(app *pocketbase.PocketBase, adventures []*adventure) {
 		}
 		for j := range allPuzzlesSlice {
 			allPuzzlesSlice[j].Set("next", nextMap[allPuzzlesSlice[j].Get("title").(string)])
-			err = app.Dao().SaveRecord(allPuzzlesSlice[j])
+			err = db.SaveRecord(allPuzzlesSlice[j])
 			if err != nil {
 				log.Fatalf("Unable to update puzzle order: %s", err)
 			}

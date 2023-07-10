@@ -9,8 +9,10 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/daos"
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
+	"github.com/pocketbase/pocketbase/tools/mailer"
 	"io"
 	"math/rand"
 	"net/http"
@@ -18,31 +20,31 @@ import (
 	"time"
 )
 
-func createWomRoutesHook(app *pocketbase.PocketBase) func(e *core.ServeEvent) error {
+func createWomRoutesHook(app *pocketbase.PocketBase, db *daos.Dao, mailClient mailer.Mailer, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string) func(e *core.ServeEvent) error {
 	return func(e *core.ServeEvent) error {
-		_ = e.Router.POST("/adventure/:id/start", handleStartAdventure(app))
-		_ = e.Router.POST("/games/:code/start", handleStartGame(app))
-		_ = e.Router.POST("/mail/contact", handleContactForm(app))
-		_ = e.Router.POST("/import/zip", handleAdventureImport(app), apis.RequireAdminAuth())
-		_ = e.Router.POST("/hints/request", handleHintRequest(app))
-		_ = e.Router.POST("/mail/subscribe", handleSubscribe(app))
-		_ = e.Router.POST("/mail/confirm", handleConfirm(app))
-		_ = e.Router.POST("/mail/unsubscribe", handleUnsubscribe(app))
+		_ = e.Router.POST("/adventure/:id/start", handleStartAdventure(db, app))
+		_ = e.Router.POST("/games/:code/start", handleStartGame(db))
+		_ = e.Router.POST("/mail/contact", handleContactForm(mailClient, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey))
+		_ = e.Router.POST("/import/zip", handleAdventureImport(db, app), apis.RequireAdminAuth())
+		_ = e.Router.POST("/hints/request", handleHintRequest(db))
+		_ = e.Router.POST("/mail/subscribe", handleSubscribe(db, mailClient, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret))
+		_ = e.Router.POST("/mail/confirm", handleConfirm(db, mailClient, senderName, senderAddress, mailingListSecret))
+		_ = e.Router.POST("/mail/unsubscribe", handleUnsubscribe(db, mailClient, senderName, senderAddress, mailingListSecret))
 		return nil
 	}
 }
 
-func handleStartAdventure(app *pocketbase.PocketBase) func(echo.Context) error {
+func handleStartAdventure(db *daos.Dao, app core.App) func(echo.Context) error {
 	return func(c echo.Context) error {
 		id := c.PathParam("id")
 		if len(id) == 0 {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid Adventure"})
 		}
-		adventure, err := app.Dao().FindRecordById("adventures", id)
+		adventure, err := db.FindRecordById("adventures", id)
 		if err != nil {
 			return c.JSON(http.StatusNotFound, map[string]string{"error": "Adventure not found"})
 		}
-		collection, err := app.Dao().FindCollectionByNameOrId("games")
+		collection, err := db.FindCollectionByNameOrId("games")
 		if err != nil {
 			return c.JSON(http.StatusNotFound, map[string]string{"error": "Adventure not found"})
 		}
@@ -85,13 +87,13 @@ func handleStartAdventure(app *pocketbase.PocketBase) func(echo.Context) error {
 	}
 }
 
-func handleStartGame(app *pocketbase.PocketBase) func(echo.Context) error {
+func handleStartGame(db *daos.Dao) func(echo.Context) error {
 	return func(c echo.Context) error {
 		code := c.PathParam("code")
 		if len(code) == 0 {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid Game"})
 		}
-		q := app.Dao().DB().NewQuery("UPDATE games SET status = 'ACTIVE', puzzle = (SELECT adventures.firstpuzzle FROM adventures WHERE adventures.id = games.adventure), start = datetime('now') WHERE username = {:username} AND status = 'PAID' AND (puzzle='' OR puzzle IS NULL);")
+		q := db.DB().NewQuery("UPDATE games SET status = 'ACTIVE', puzzle = (SELECT adventures.firstpuzzle FROM adventures WHERE adventures.id = games.adventure), start = datetime('now') WHERE username = {:username} AND status = 'PAID' AND (puzzle='' OR puzzle IS NULL);")
 		q = q.Bind(dbx.Params{"username": code})
 		result, err := q.Execute()
 		if err != nil {
@@ -110,7 +112,7 @@ func handleStartGame(app *pocketbase.PocketBase) func(echo.Context) error {
 	}
 }
 
-func handleContactForm(app *pocketbase.PocketBase) echo.HandlerFunc {
+func handleContactForm(mailClient mailer.Mailer, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		type req struct {
 			Token   string
@@ -134,23 +136,21 @@ func handleContactForm(app *pocketbase.PocketBase) echo.HandlerFunc {
 			email = authInfo.Email()
 		}
 		if data.Email != email {
-			secretKey, _ := app.RootCmd.Flags().GetString("hcaptchaSecretKey")
-			siteKey, _ := app.RootCmd.Flags().GetString("hcaptchaSiteKey")
-			if err := checkCaptcha(siteKey, secretKey, data.Token); err != nil {
+			if err := checkCaptcha(hcaptchaSiteKey, hcaptchaSecretKey, data.Token); err != nil {
 				return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 			}
 			if !validEmail(data.Email) {
 				return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 			}
 		}
-		if err := SendContactFormMail(app, data.Email, data.Name, data.Message); err != nil {
+		if err := SendContactFormMail(mailClient, senderName, senderAddress, data.Email, data.Name, data.Message); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
 		}
 		return c.NoContent(http.StatusNoContent)
 	}
 }
 
-func handleAdventureImport(app *pocketbase.PocketBase) func(c echo.Context) error {
+func handleAdventureImport(db *daos.Dao, fso fileSystemOpener) func(c echo.Context) error {
 	return func(c echo.Context) error {
 		form, err := c.MultipartForm()
 		if err != nil {
@@ -169,22 +169,22 @@ func handleAdventureImport(app *pocketbase.PocketBase) func(c echo.Context) erro
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to open zip"})
 		}
 		adventures := getAdventures(zipReader, false)
-		updateAdventures(app, adventures)
+		updateAdventures(db, fso, adventures)
 		return c.JSON(http.StatusOK, nil)
 	}
 }
 
-func handleHintRequest(app *pocketbase.PocketBase) echo.HandlerFunc {
+func handleHintRequest(db *daos.Dao) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		game, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
 		if game == nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Game not found"})
 		}
-		usedhints, err := app.Dao().FindCollectionByNameOrId("usedhints")
+		usedhints, err := db.FindCollectionByNameOrId("usedhints")
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "usedhints not found"})
 		}
-		guesses, err := app.Dao().FindCollectionByNameOrId("guesses")
+		guesses, err := db.FindCollectionByNameOrId("guesses")
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "guesses not found"})
 		}
@@ -199,7 +199,7 @@ func handleHintRequest(app *pocketbase.PocketBase) echo.HandlerFunc {
 		}
 		record.Set("hint", hintID)
 		record.Set("game", game.Id)
-		err = app.Dao().SaveRecord(record)
+		err = db.SaveRecord(record)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "unable to request hint"})
 		}
@@ -208,7 +208,7 @@ func handleHintRequest(app *pocketbase.PocketBase) echo.HandlerFunc {
 		record.Set("game", game.Id)
 		record.Set("puzzle", game.Get("puzzle"))
 		record.Set("content", "*hint")
-		err = app.Dao().SaveRecord(record)
+		err = db.SaveRecord(record)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "unable to request hint"})
 		}
@@ -216,7 +216,7 @@ func handleHintRequest(app *pocketbase.PocketBase) echo.HandlerFunc {
 	}
 }
 
-func handleSubscribe(app *pocketbase.PocketBase) echo.HandlerFunc {
+func handleSubscribe(db *daos.Dao, mailClient mailer.Mailer, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		authInfo, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
 		type req struct {
@@ -232,27 +232,25 @@ func handleSubscribe(app *pocketbase.PocketBase) echo.HandlerFunc {
 			email = authInfo.Email()
 		}
 		if data.Email != email {
-			secretKey, _ := app.RootCmd.Flags().GetString("hcaptchaSecretKey")
-			siteKey, _ := app.RootCmd.Flags().GetString("hcaptchaSiteKey")
-			if err := checkCaptcha(siteKey, secretKey, data.Captcha); err != nil {
+			if err := checkCaptcha(hcaptchaSiteKey, hcaptchaSecretKey, data.Captcha); err != nil {
 				return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 			}
-			if err := sendSubscriptionOptInMail(app, data.Email); err != nil {
+			if err := sendSubscriptionOptInMail(mailClient, senderName, senderAddress, mailingListSecret, email); err != nil {
 				return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
 			}
 			return c.JSON(http.StatusOK, map[string]bool{"NeedConfirm": true})
 		}
-		if err := addEmailToMailingList(app, data.Email); err != nil {
+		if err := addEmailToMailingList(db, data.Email); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
 		}
-		if err := sendSubscriptionConfirmedMail(app, data.Email); err != nil {
+		if err := sendSubscriptionConfirmedMail(mailClient, senderName, senderAddress, mailingListSecret, email); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
 		}
 		return c.JSON(http.StatusOK, map[string]bool{"NeedConfirm": false})
 	}
 }
 
-func handleConfirm(app *pocketbase.PocketBase) echo.HandlerFunc {
+func handleConfirm(db *daos.Dao, mailClient mailer.Mailer, senderName, senderAddress, mailingListSecret string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		type req struct {
 			Token string
@@ -261,22 +259,21 @@ func handleConfirm(app *pocketbase.PocketBase) echo.HandlerFunc {
 		if err := c.Bind(&data); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 		}
-		secretKey, _ := app.RootCmd.Flags().GetString("mailinglistSecretKey")
-		email, err := validateSubscriptionJWT(secretKey, "unsubscribe", data.Token)
+		email, err := validateSubscriptionJWT(mailingListSecret, "unsubscribe", data.Token)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 		}
-		if err := removeEmailToMailingList(app, email); err != nil {
+		if err := removeEmailToMailingList(db, email); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
 		}
-		if err := sendSubscriptionConfirmedMail(app, email); err != nil {
+		if err := sendSubscriptionConfirmedMail(mailClient, senderName, senderAddress, mailingListSecret, email); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
 		}
 		return c.NoContent(http.StatusNoContent)
 	}
 }
 
-func handleUnsubscribe(app *pocketbase.PocketBase) echo.HandlerFunc {
+func handleUnsubscribe(db *daos.Dao, mailClient mailer.Mailer, senderName, senderAddress, mailingListSecret string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		type req struct {
 			Token string
@@ -285,15 +282,14 @@ func handleUnsubscribe(app *pocketbase.PocketBase) echo.HandlerFunc {
 		if err := c.Bind(&data); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 		}
-		secretKey, _ := app.RootCmd.Flags().GetString("mailinglistSecretKey")
-		email, err := validateSubscriptionJWT(secretKey, "unsubscribe", data.Token)
+		email, err := validateSubscriptionJWT(mailingListSecret, "unsubscribe", data.Token)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 		}
-		if err := removeEmailToMailingList(app, email); err != nil {
+		if err := removeEmailToMailingList(db, email); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
 		}
-		if err := sendSubscriptionUnsubscribedMail(app, email); err != nil {
+		if err := sendSubscriptionUnsubscribedMail(mailClient, senderName, senderAddress, email); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
 		}
 		return c.NoContent(http.StatusNoContent)
