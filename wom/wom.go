@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/csmith/aca"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
@@ -17,6 +18,7 @@ import (
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
+	"github.com/pocketbase/pocketbase/tools/mailer"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"io"
@@ -24,6 +26,8 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/mail"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -39,6 +43,12 @@ func ConfigurePocketBase(app *pocketbase.PocketBase) {
 	serveCmd.PersistentFlags().StringP("email", "e", viper.GetString("EMAIL"), "Sets the initial admin email")
 	serveCmd.PersistentFlags().StringP("password", "p", viper.GetString("PASSWORD"), "Sets the initial admin password")
 	serveCmd.PersistentFlags().StringP("webhook-url", "w", viper.GetString("WEBHOOK_URL"), "Webhook to send events to {'content': 'message'}")
+	serveCmd.PersistentFlags().StringP("hcaptchaSecretKey", "", viper.GetString("HCAPTCHA_SECRET_KEY"), "Secret key to use for hCaptcha")
+	serveCmd.PersistentFlags().StringP("hCaptchaSiteKey", "", viper.GetString("HCAPTCHA_SITE_KEY"), "Site key to use for hCaptcha")
+	serveCmd.PersistentFlags().StringP("mailinglistSecretKey", "", viper.GetString("MAILINGLIST_SECRET_KEY"), "Mailing list secret key")
+	_ = serveCmd.MarkFlagRequired("hcaptchaSecretKey")
+	_ = serveCmd.MarkFlagRequired("hCaptchaSiteKey")
+	_ = serveCmd.MarkFlagRequired("mailinglistSecretKey")
 	app.RootCmd.AddCommand(serveCmd)
 	app.RootCmd.AddCommand(NewImportCmd(app))
 	app.OnBeforeServe().Add(createAdminAccountHook(serveCmd))
@@ -109,10 +119,10 @@ func createWomRoutesHook(app *pocketbase.PocketBase) func(e *core.ServeEvent) er
 			return err
 		}
 		_, err = e.Router.AddRoute(echo.Route{
-			Name:   "send contact form",
-			Path:   "/mail/contact",
-			Method: http.MethodPost,
-			//Handler: wom.SendContactForm,
+			Name:    "send contact form",
+			Path:    "/mail/contact",
+			Method:  http.MethodPost,
+			Handler: sendContactForm(app),
 		})
 		_, err = e.Router.AddRoute(echo.Route{
 			Method:      http.MethodPost,
@@ -127,11 +137,323 @@ func createWomRoutesHook(app *pocketbase.PocketBase) func(e *core.ServeEvent) er
 			Path:    "/hints/request",
 			Handler: requestHint(app),
 		})
-		//e.Router.Add(http.MethodGet, "/mail/subscribe", wom.SubscribeToMailingList)
-		//e.Router.Add(http.MethodGet, "/mail/confirm", wom.ConfirmMailingListSubscription)
-		//e.Router.Add(http.MethodGet, "/mail/unsubscribe", wom.UnsubscribeFromMailingList)
-		//e.Router.Add(http.MethodGet, "/mail/contact", wom.SendContactForm)
+		_, err = e.Router.AddRoute(echo.Route{
+			Method:  http.MethodPost,
+			Name:    "request hint",
+			Path:    "/mail/subscribe",
+			Handler: handleSubscribe(app),
+		})
+		_, err = e.Router.AddRoute(echo.Route{
+			Method:  http.MethodPost,
+			Name:    "request hint",
+			Path:    "/mail/confirm",
+			Handler: handleConfirm(app),
+		})
+		_, err = e.Router.AddRoute(echo.Route{
+			Method:  http.MethodPost,
+			Name:    "request hint",
+			Path:    "/mail/unsubscribe",
+			Handler: handleUnsubscribe(app),
+		})
 		return nil
+	}
+}
+
+func handleUnsubscribe(app *pocketbase.PocketBase) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		type req struct {
+			Token string
+		}
+		var data = req{}
+		if err := c.Bind(&data); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		}
+		secretKey, _ := app.RootCmd.Flags().GetString("mailinglistSecretKey")
+		email, err := validateSubscriptionJWT(secretKey, "unsubscribe", data.Token)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		}
+		if err := removeEmailToMailingList(app, email); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
+		}
+		if err := sendSubscriptionUnsubscribedMail(app, email); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
+		}
+		return c.NoContent(http.StatusNoContent)
+	}
+}
+
+func validateSubscriptionJWT(secret, kind, token string) (string, error) {
+	t, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return []byte(secret), nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	if claims, ok := t.Claims.(jwt.MapClaims); ok && t.Valid {
+		subject := fmt.Sprintf("%s", claims["sub"])
+		if strings.HasPrefix(subject, kind+":") {
+			return strings.TrimPrefix(subject, kind+":"), nil
+		}
+		return "", fmt.Errorf("not a %s token", kind)
+	} else {
+		return "", fmt.Errorf("invalid token")
+	}
+}
+
+func handleConfirm(app *pocketbase.PocketBase) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		type req struct {
+			Token string
+		}
+		var data = req{}
+		if err := c.Bind(&data); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		}
+		secretKey, _ := app.RootCmd.Flags().GetString("mailinglistSecretKey")
+		email, err := validateSubscriptionJWT(secretKey, "unsubscribe", data.Token)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		}
+		if err := removeEmailToMailingList(app, email); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
+		}
+		if err := sendSubscriptionConfirmedMail(app, email); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
+		}
+		return c.NoContent(http.StatusNoContent)
+	}
+}
+
+func sendContactForm(app *pocketbase.PocketBase) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		type req struct {
+			Token   string
+			Name    string
+			Email   string
+			Message string
+		}
+		var data = req{}
+		if err := c.Bind(&data); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		}
+		if strings.TrimSpace(data.Name) == "" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		}
+		if strings.TrimSpace(data.Message) == "" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		}
+		authInfo, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
+		email := ""
+		if authInfo != nil && authInfo.Verified() {
+			email = authInfo.Email()
+		}
+		if data.Email != email {
+			secretKey, _ := app.RootCmd.Flags().GetString("hcaptchaSecretKey")
+			siteKey, _ := app.RootCmd.Flags().GetString("hcaptchaSiteKey")
+			if err := checkCaptcha(siteKey, secretKey, data.Token); err != nil {
+				return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+			}
+			if !validEmail(data.Email) {
+				return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+			}
+		}
+		if err := SendContactFormMail(app, data.Email, data.Name, data.Message); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
+		}
+		return c.NoContent(http.StatusNoContent)
+	}
+}
+
+func SendContactFormMail(app *pocketbase.PocketBase, email string, name string, content string) error {
+	message := &mailer.Message{
+		From: mail.Address{
+			Name:    app.Settings().Meta.SenderName,
+			Address: app.Settings().Meta.SenderAddress,
+		},
+		To: []mail.Address{{
+			Address: email,
+		}},
+		Headers: map[string]string{
+			"Reply-To": email,
+		},
+		Subject: "Contact Form",
+		Text:    fmt.Sprintf("Name: %s\nMessage\n%s", name, content),
+	}
+	return app.NewMailClient().Send(message)
+}
+
+func validEmail(email string) bool {
+	_, err := mail.ParseAddress(email)
+	return err == nil && !strings.Contains(email, " ")
+}
+
+func handleSubscribe(app *pocketbase.PocketBase) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		authInfo, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
+		type req struct {
+			Email   string
+			Captcha string
+		}
+		var data = req{}
+		if err := c.Bind(&data); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		}
+		email := ""
+		if authInfo != nil && authInfo.Verified() {
+			email = authInfo.Email()
+		}
+		if data.Email != email {
+			secretKey, _ := app.RootCmd.Flags().GetString("hcaptchaSecretKey")
+			siteKey, _ := app.RootCmd.Flags().GetString("hcaptchaSiteKey")
+			if err := checkCaptcha(siteKey, secretKey, data.Captcha); err != nil {
+				return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+			}
+			if err := sendSubscriptionOptInMail(app, data.Email); err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
+			}
+			return c.JSON(http.StatusOK, map[string]bool{"NeedConfirm": true})
+		}
+		if err := addEmailToMailingList(app, data.Email); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
+		}
+		if err := sendSubscriptionConfirmedMail(app, data.Email); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
+		}
+		return c.JSON(http.StatusOK, map[string]bool{"NeedConfirm": false})
+	}
+}
+
+func sendSubscriptionConfirmedMail(app *pocketbase.PocketBase, email string) error {
+	secretKey, _ := app.RootCmd.Flags().GetString("mailinglistSecretKey")
+	token, err := createUnsubscribeJwt(secretKey, email)
+	if err != nil {
+		return err
+	}
+	message := &mailer.Message{
+		From: mail.Address{
+			Name:    app.Settings().Meta.SenderName,
+			Address: app.Settings().Meta.SenderAddress,
+		},
+		To: []mail.Address{{
+			Address: email,
+		}},
+		Subject: "Mailinglist Confirmed",
+		Text:    fmt.Sprintf("/mail/unsubscribe/%s", token),
+	}
+	return app.NewMailClient().Send(message)
+}
+
+func addEmailToMailingList(app *pocketbase.PocketBase, email string) error {
+	mailinglist, err := app.Dao().FindCollectionByNameOrId("mailinglist")
+	if err != nil {
+		return err
+	}
+	record := models.NewRecord(mailinglist)
+	record.RefreshId()
+	record.Set("email", email)
+	return app.Dao().SaveRecord(record)
+}
+
+func removeEmailToMailingList(app *pocketbase.PocketBase, email string) error {
+	record, err := app.Dao().FindFirstRecordByData("mailinglist", "email", email)
+	if err != nil {
+		return err
+	}
+	return app.Dao().DeleteRecord(record)
+}
+
+func sendSubscriptionUnsubscribedMail(app *pocketbase.PocketBase, email string) error {
+	message := &mailer.Message{
+		From: mail.Address{
+			Name:    app.Settings().Meta.SenderName,
+			Address: app.Settings().Meta.SenderAddress,
+		},
+		To: []mail.Address{{
+			Address: email,
+		}},
+		Subject: "Mailinglist Unsubscribed",
+		Text:    fmt.Sprintf("Sorry to see you go"),
+	}
+	return app.NewMailClient().Send(message)
+}
+
+func sendSubscriptionOptInMail(app *pocketbase.PocketBase, email string) error {
+	secretKey, _ := app.RootCmd.Flags().GetString("mailinglistSecretKey")
+	token, err := createSubscriptionJwt(secretKey, email)
+	if err != nil {
+		return err
+	}
+	message := &mailer.Message{
+		From: mail.Address{
+			Name:    app.Settings().Meta.SenderName,
+			Address: app.Settings().Meta.SenderAddress,
+		},
+		To: []mail.Address{{
+			Address: email,
+		}},
+		Subject: "Mailinglist Opt-In",
+		Text:    fmt.Sprintf("/mail/confirm/%s", token),
+	}
+	return app.NewMailClient().Send(message)
+}
+
+func createSubscriptionJwt(secret, email string) (string, error) {
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Issuer:    "wom",
+		Subject:   fmt.Sprintf("subscribe:%s", email),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+		NotBefore: jwt.NewNumericDate(time.Now()),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+	}).SignedString([]byte(secret))
+}
+
+func createUnsubscribeJwt(secret, email string) (string, error) {
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Issuer:   "wom",
+		Subject:  fmt.Sprintf("unsubscribe:%s", email),
+		IssuedAt: jwt.NewNumericDate(time.Now()),
+	}).SignedString([]byte(secret))
+}
+
+func checkCaptcha(siteKey, secretKey, token string) error {
+	type Response struct {
+		Success bool `json:"success"`
+	}
+
+	values := url.Values{
+		"secret":   {secretKey},
+		"sitekey":  {siteKey},
+		"response": {token},
+	}
+
+	resp, err := http.PostForm("https://hcaptcha.com/siteverify", values)
+	if err != nil {
+		return err
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	if err != nil {
+		return err
+	}
+
+	var response = Response{}
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return err
+	}
+
+	if response.Success {
+		return nil
+	} else {
+		return fmt.Errorf("captcha verification failed")
 	}
 }
 
