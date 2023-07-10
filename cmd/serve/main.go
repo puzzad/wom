@@ -30,6 +30,7 @@ var (
 	smtpSenderName       = flag.String("smtp-sender-name", "", "SMTP Sender Name")
 	siteURL              = flag.String("site-url", "", "Public facing site URL")
 	siteName             = flag.String("site-name", "", "Public facing site name")
+	backups              = flag.Bool("backups", false, "If enabled, backups will be performed every day at midnight, the last 7 will be kept")
 )
 
 func main() {
@@ -92,12 +93,18 @@ func UpdateSettings(app *pocketbase.PocketBase) error {
 	form.Meta.AppUrl = *siteURL
 	form.Meta.HideControls = true
 	form.Logs.MaxDays = 90
-	form.Smtp.Enabled = true
-	form.Smtp.Host = *smtpHost
-	form.Smtp.Port = *smtpPort
-	form.Smtp.Username = *smtpUser
-	form.Smtp.Password = *smtpPass
+	form.Smtp.Enabled = *smtpHost != ""
+	if *smtpHost != "" {
+		form.Smtp.Host = *smtpHost
+		form.Smtp.Port = *smtpPort
+		form.Smtp.Username = *smtpUser
+		form.Smtp.Password = *smtpPass
+	}
 	form.Meta.SenderName = *smtpSenderName
 	form.Meta.SenderAddress = *smtpSenderAddress
+	if *backups {
+		form.Backups.Cron = "0 0 * * *"
+		form.Backups.CronMaxKeep = 7
+	}
 	return form.Submit()
 }
