@@ -19,13 +19,13 @@ import (
 	"time"
 )
 
-func createWomRoutesHook(app *pocketbase.PocketBase, db *daos.Dao, mailClient mailer.Mailer, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string) func(e *core.ServeEvent) error {
+func createWomRoutesHook(app *pocketbase.PocketBase, db *daos.Dao, mailClient mailer.Mailer, contactEmail, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string) func(e *core.ServeEvent) error {
 	return func(e *core.ServeEvent) error {
 		_ = e.Router.POST("/wom/startadventure", handleStartAdventure(db, app))
 		_ = e.Router.POST("/wom/games/:code/start", handleStartGame(db))
 		_ = e.Router.POST("/wom/importzip", handleAdventureImport(db, app), apis.RequireAdminAuth())
 		_ = e.Router.POST("/wom/requesthint", handleHintRequest(db))
-		_ = e.Router.POST("/wom/contact", handleContactForm(mailClient, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey))
+		_ = e.Router.POST("/wom/contact", handleContactForm(mailClient, contactEmail, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey))
 		_ = e.Router.POST("/wom/subscribe", handleSubscribe(db, mailClient, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret))
 		_ = e.Router.POST("/wom/confirm", handleConfirm(db, mailClient, senderName, senderAddress, mailingListSecret))
 		_ = e.Router.POST("/wom/unsubscribe", handleUnsubscribe(db, mailClient, senderName, senderAddress, mailingListSecret))
@@ -116,7 +116,7 @@ func handleStartGame(db *daos.Dao) func(echo.Context) error {
 	}
 }
 
-func handleContactForm(mailClient mailer.Mailer, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey string) echo.HandlerFunc {
+func handleContactForm(mailClient mailer.Mailer, contactEmail, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		type req struct {
 			Token   string `json:"token"`
@@ -147,7 +147,7 @@ func handleContactForm(mailClient mailer.Mailer, senderName, senderAddress, hcap
 				return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 			}
 		}
-		if err := SendContactFormMail(mailClient, senderName, senderAddress, data.Email, data.Name, data.Message); err != nil {
+		if err := SendContactFormMail(mailClient, contactEmail, senderName, senderAddress, data.Email, data.Name, data.Message); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
 		}
 		return c.NoContent(http.StatusNoContent)

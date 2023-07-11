@@ -31,6 +31,7 @@ var (
 	siteURL              = flag.String("site-url", "", "Public facing site URL")
 	siteName             = flag.String("site-name", "", "Public facing site name")
 	backups              = flag.Bool("backups", false, "If enabled, backups will be performed every day at midnight, the last 7 will be kept")
+	contactEmail         = flag.String("contact-email", "", "Email address to send contact form emails to")
 )
 
 func main() {
@@ -53,7 +54,7 @@ func main() {
 	if err := UpdateAdmin(app, *adminEmail, *adminPassword); err != nil {
 		log.Fatal(err)
 	}
-	wom.ConfigurePocketBase(app, app.Dao(), app.NewMailClient(), app.Settings().Meta.SenderName,
+	wom.ConfigurePocketBase(app, app.Dao(), app.NewMailClient(), *contactEmail, app.Settings().Meta.SenderName,
 		app.Settings().Meta.SenderAddress, *hcaptchatSecretKey, *hcaptchaSiteKey, *mailinglistSecretKey, *webhookURL)
 	serveCmd := cmd.NewServeCommand(app, false)
 	serveCmd.SetArgs([]string{"--http=0.0.0.0:8090"})

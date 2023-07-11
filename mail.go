@@ -9,14 +9,14 @@ import (
 	"strings"
 )
 
-func SendContactFormMail(mailClient mailer.Mailer, senderName, senderAddress, email string, name string, content string) error {
+func SendContactFormMail(mailClient mailer.Mailer, contactEmail, senderName, senderAddress, email string, name string, content string) error {
 	message := &mailer.Message{
 		From: mail.Address{
 			Name:    senderName,
 			Address: senderAddress,
 		},
 		To: []mail.Address{{
-			Address: email,
+			Address: contactEmail,
 		}},
 		Headers: map[string]string{
 			"Reply-To": email,
