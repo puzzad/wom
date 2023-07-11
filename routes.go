@@ -22,13 +22,13 @@ import (
 func createWomRoutesHook(app *pocketbase.PocketBase, db *daos.Dao, mailClient mailer.Mailer, contactEmail, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string) func(e *core.ServeEvent) error {
 	return func(e *core.ServeEvent) error {
 		_ = e.Router.POST("/wom/startadventure", handleStartAdventure(db, app))
-		_ = e.Router.POST("/wom/games/:code/start", handleStartGame(db))
+		_ = e.Router.POST("/wom/startgame", handleStartGame(db))
 		_ = e.Router.POST("/wom/importzip", handleAdventureImport(db, app), apis.RequireAdminAuth())
 		_ = e.Router.POST("/wom/requesthint", handleHintRequest(db))
 		_ = e.Router.POST("/wom/contact", handleContactForm(mailClient, contactEmail, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey))
 		_ = e.Router.POST("/wom/subscribe", handleSubscribe(db, mailClient, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret))
-		_ = e.Router.POST("/wom/confirm", handleConfirm(db, mailClient, senderName, senderAddress, mailingListSecret))
-		_ = e.Router.POST("/wom/unsubscribe", handleUnsubscribe(db, mailClient, senderName, senderAddress, mailingListSecret))
+		_ = e.Router.GET("/wom/confirm/:token", handleConfirm(db, mailClient, senderName, senderAddress, mailingListSecret))
+		_ = e.Router.GET("/wom/unsubscribe/:token", handleUnsubscribe(db, mailClient, senderName, senderAddress, mailingListSecret))
 		return nil
 	}
 }
@@ -235,20 +235,24 @@ func handleSubscribe(db *daos.Dao, mailClient mailer.Mailer, senderName, senderA
 		if authInfo != nil && authInfo.Verified() {
 			email = authInfo.Email()
 		}
+		if data.Email == "" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		}
 		if data.Email != email {
 			if err := checkCaptcha(hcaptchaSiteKey, hcaptchaSecretKey, data.Captcha); err != nil {
 				return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 			}
-			if err := sendSubscriptionOptInMail(mailClient, senderName, senderAddress, mailingListSecret, email); err != nil {
-				return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
+			if err := sendSubscriptionOptInMail(mailClient, senderName, senderAddress, mailingListSecret, data.Email); err != nil {
+				fmt.Printf("Unable to send subscription email to '%s': %s\n", email, err)
+				return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Error sending the opt in email"})
 			}
 			return c.JSON(http.StatusOK, map[string]bool{"NeedConfirm": true})
 		}
 		if err := addEmailToMailingList(db, data.Email); err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Error adding you to the mailing list"})
 		}
-		if err := sendSubscriptionConfirmedMail(mailClient, senderName, senderAddress, mailingListSecret, email); err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
+		if err := sendSubscriptionConfirmedMail(mailClient, senderName, senderAddress, mailingListSecret, data.Email); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Error sending the confirmation email"})
 		}
 		return c.JSON(http.StatusOK, map[string]bool{"NeedConfirm": false})
 	}
@@ -257,20 +261,20 @@ func handleSubscribe(db *daos.Dao, mailClient mailer.Mailer, senderName, senderA
 func handleConfirm(db *daos.Dao, mailClient mailer.Mailer, senderName, senderAddress, mailingListSecret string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		type req struct {
-			Token string `json:"token"`
+			Token string `param:"token"`
 		}
 		var data = req{}
 		if err := c.Bind(&data); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 		}
-		email, err := validateSubscriptionJWT(mailingListSecret, "unsubscribe", data.Token)
+		email, err := validateSubscriptionJWT(mailingListSecret, "subscribe", data.Token)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 		}
-		if err := removeEmailToMailingList(db, email); err != nil {
+		if err = addEmailToMailingList(db, email); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
 		}
-		if err := sendSubscriptionConfirmedMail(mailClient, senderName, senderAddress, mailingListSecret, email); err != nil {
+		if err = sendSubscriptionConfirmedMail(mailClient, senderName, senderAddress, mailingListSecret, email); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
 		}
 		return c.NoContent(http.StatusNoContent)
@@ -280,7 +284,7 @@ func handleConfirm(db *daos.Dao, mailClient mailer.Mailer, senderName, senderAdd
 func handleUnsubscribe(db *daos.Dao, mailClient mailer.Mailer, senderName, senderAddress, mailingListSecret string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		type req struct {
-			Token string `json:"token"`
+			Token string `param:"token"`
 		}
 		var data = req{}
 		if err := c.Bind(&data); err != nil {

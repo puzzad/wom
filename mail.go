@@ -64,6 +64,7 @@ func sendSubscriptionUnsubscribedMail(mailClient mailer.Mailer, senderName, send
 func sendSubscriptionOptInMail(mailClient mailer.Mailer, senderName, senderAddress, mailingListSecret, email string) error {
 	token, err := createSubscriptionJwt(mailingListSecret, email)
 	if err != nil {
+		fmt.Printf("Error creating subscription JWT: %s", err)
 		return err
 	}
 	message := &mailer.Message{
@@ -84,6 +85,13 @@ func addEmailToMailingList(db *daos.Dao, email string) error {
 	mailinglist, err := db.FindCollectionByNameOrId("mailinglist")
 	if err != nil {
 		return err
+	}
+	existing, err := db.FindFirstRecordByData("mailinglist", "email", email)
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		return nil
 	}
 	record := models.NewRecord(mailinglist)
 	record.RefreshId()
