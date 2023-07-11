@@ -13,7 +13,6 @@ import (
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/mailer"
-	"io"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -22,25 +21,28 @@ import (
 
 func createWomRoutesHook(app *pocketbase.PocketBase, db *daos.Dao, mailClient mailer.Mailer, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string) func(e *core.ServeEvent) error {
 	return func(e *core.ServeEvent) error {
-		_ = e.Router.POST("/adventure/:id/start", handleStartAdventure(db, app))
-		_ = e.Router.POST("/games/:code/start", handleStartGame(db))
-		_ = e.Router.POST("/mail/contact", handleContactForm(mailClient, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey))
-		_ = e.Router.POST("/import/zip", handleAdventureImport(db, app), apis.RequireAdminAuth())
-		_ = e.Router.POST("/hints/request", handleHintRequest(db))
-		_ = e.Router.POST("/mail/subscribe", handleSubscribe(db, mailClient, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret))
-		_ = e.Router.POST("/mail/confirm", handleConfirm(db, mailClient, senderName, senderAddress, mailingListSecret))
-		_ = e.Router.POST("/mail/unsubscribe", handleUnsubscribe(db, mailClient, senderName, senderAddress, mailingListSecret))
+		_ = e.Router.POST("/wom/startadventure", handleStartAdventure(db, app))
+		_ = e.Router.POST("/wom/games/:code/start", handleStartGame(db))
+		_ = e.Router.POST("/wom/importzip", handleAdventureImport(db, app), apis.RequireAdminAuth())
+		_ = e.Router.POST("/wom/requesthint", handleHintRequest(db))
+		_ = e.Router.POST("/wom/contact", handleContactForm(mailClient, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey))
+		_ = e.Router.POST("/wom/subscribe", handleSubscribe(db, mailClient, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret))
+		_ = e.Router.POST("/wom/confirm", handleConfirm(db, mailClient, senderName, senderAddress, mailingListSecret))
+		_ = e.Router.POST("/wom/unsubscribe", handleUnsubscribe(db, mailClient, senderName, senderAddress, mailingListSecret))
 		return nil
 	}
 }
 
 func handleStartAdventure(db *daos.Dao, app core.App) func(echo.Context) error {
 	return func(c echo.Context) error {
-		id := c.PathParam("id")
-		if len(id) == 0 {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid Adventure"})
+		type req struct {
+			Adventure string `json:"adventure"`
 		}
-		adventure, err := db.FindRecordById("adventures", id)
+		var data = req{}
+		if err := c.Bind(&data); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		}
+		adventure, err := db.FindRecordById("adventures", data.Adventure)
 		if err != nil {
 			return c.JSON(http.StatusNotFound, map[string]string{"error": "Adventure not found"})
 		}
@@ -72,7 +74,6 @@ func handleStartAdventure(db *daos.Dao, app core.App) func(echo.Context) error {
 			"passwordConfirm": "puzzad",
 		})
 		if err = form.Submit(); err != nil {
-			fmt.Printf("Unable to add Adventure: %v\n", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to add adventure"})
 		}
 		currentGames := user.GetStringSlice("games")
@@ -89,12 +90,15 @@ func handleStartAdventure(db *daos.Dao, app core.App) func(echo.Context) error {
 
 func handleStartGame(db *daos.Dao) func(echo.Context) error {
 	return func(c echo.Context) error {
-		code := c.PathParam("code")
-		if len(code) == 0 {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid Game"})
+		type req struct {
+			Code string `json:"game"`
+		}
+		var data = req{}
+		if err := c.Bind(&data); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 		}
 		q := db.DB().NewQuery("UPDATE games SET status = 'ACTIVE', puzzle = (SELECT adventures.firstpuzzle FROM adventures WHERE adventures.id = games.adventure), start = datetime('now') WHERE username = {:username} AND status = 'PAID' AND (puzzle='' OR puzzle IS NULL);")
-		q = q.Bind(dbx.Params{"username": code})
+		q = q.Bind(dbx.Params{"username": data.Code})
 		result, err := q.Execute()
 		if err != nil {
 			fmt.Printf("%v\n", err)
@@ -115,10 +119,10 @@ func handleStartGame(db *daos.Dao) func(echo.Context) error {
 func handleContactForm(mailClient mailer.Mailer, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		type req struct {
-			Token   string
-			Name    string
-			Email   string
-			Message string
+			Token   string `json:"token"`
+			Name    string `json:"name"`
+			Email   string `json:"email"`
+			Message string `json:"message"`
 		}
 		var data = req{}
 		if err := c.Bind(&data); err != nil {
@@ -188,16 +192,16 @@ func handleHintRequest(db *daos.Dao) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "guesses not found"})
 		}
+		type req struct {
+			Hint string `json:"hint"`
+		}
+		var data = req{}
+		if err = c.Bind(&data); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Hint ID not found"})
+		}
 		record := models.NewRecord(usedhints)
 		record.RefreshId()
-		hintID, err := io.ReadAll(c.Request().Body)
-		defer func() {
-			_ = c.Request().Body.Close()
-		}()
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "hintID not found"})
-		}
-		record.Set("hint", hintID)
+		record.Set("hint", data.Hint)
 		record.Set("game", game.Id)
 		err = db.SaveRecord(record)
 		if err != nil {
@@ -220,8 +224,8 @@ func handleSubscribe(db *daos.Dao, mailClient mailer.Mailer, senderName, senderA
 	return func(c echo.Context) error {
 		authInfo, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
 		type req struct {
-			Email   string
-			Captcha string
+			Email   string `json:"email"`
+			Captcha string `json:"captcha"`
 		}
 		var data = req{}
 		if err := c.Bind(&data); err != nil {
@@ -253,7 +257,7 @@ func handleSubscribe(db *daos.Dao, mailClient mailer.Mailer, senderName, senderA
 func handleConfirm(db *daos.Dao, mailClient mailer.Mailer, senderName, senderAddress, mailingListSecret string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		type req struct {
-			Token string
+			Token string `json:"token"`
 		}
 		var data = req{}
 		if err := c.Bind(&data); err != nil {
@@ -276,7 +280,7 @@ func handleConfirm(db *daos.Dao, mailClient mailer.Mailer, senderName, senderAdd
 func handleUnsubscribe(db *daos.Dao, mailClient mailer.Mailer, senderName, senderAddress, mailingListSecret string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		type req struct {
-			Token string
+			Token string `json:"token"`
 		}
 		var data = req{}
 		if err := c.Bind(&data); err != nil {
