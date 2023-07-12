@@ -2,6 +2,7 @@ package wom
 
 import (
 	"archive/zip"
+	"embed"
 	"fmt"
 	"github.com/csmith/aca"
 	"github.com/labstack/echo/v5"
@@ -19,6 +20,11 @@ import (
 	"time"
 )
 
+//go:embed all:site
+var embedded embed.FS
+
+var siteFS = echo.MustSubFS(embedded, "site")
+
 func createWomRoutesHook(app *pocketbase.PocketBase, db *daos.Dao, mailClient mailer.Mailer, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string) func(e *core.ServeEvent) error {
 	return func(e *core.ServeEvent) error {
 		_ = e.Router.POST("/wom/startadventure", handleStartAdventure(db, app))
@@ -29,6 +35,7 @@ func createWomRoutesHook(app *pocketbase.PocketBase, db *daos.Dao, mailClient ma
 		_ = e.Router.POST("/wom/subscribe", handleSubscribe(db, mailClient, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret))
 		_ = e.Router.GET("/wom/confirm/:token", handleConfirm(db, mailClient, siteURL, senderName, senderAddress, mailingListSecret))
 		_ = e.Router.GET("/wom/unsubscribe/:token", handleUnsubscribe(db, mailClient, siteURL, senderName, senderAddress, mailingListSecret))
+		e.Router.GET("/*", apis.StaticDirectoryHandler(siteFS, true))
 		return nil
 	}
 }
