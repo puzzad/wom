@@ -54,7 +54,7 @@ func main() {
 	if err := UpdateAdmin(app, *adminEmail, *adminPassword); err != nil {
 		log.Fatal(err)
 	}
-	wom.ConfigurePocketBase(app, app.Dao(), app.NewMailClient(), *contactEmail, app.Settings().Meta.SenderName,
+	wom.ConfigurePocketBase(app, app.Dao(), app.NewMailClient(), *contactEmail, *siteURL, app.Settings().Meta.SenderName,
 		app.Settings().Meta.SenderAddress, *hcaptchatSecretKey, *hcaptchaSiteKey, *mailinglistSecretKey, *webhookURL)
 	serveCmd := cmd.NewServeCommand(app, false)
 	serveCmd.SetArgs([]string{"--http=0.0.0.0:8090"})
