@@ -12,6 +12,7 @@ import (
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 	"github.com/puzzad/wom"
 	_ "github.com/puzzad/wom/migrations"
+	"github.com/spf13/cobra"
 	"log"
 )
 
@@ -32,6 +33,9 @@ var (
 	siteName             = flag.String("site-name", "", "Public facing site name")
 	backups              = flag.Bool("backups", false, "If enabled, backups will be performed every day at midnight, the last 7 will be kept")
 	contactEmail         = flag.String("contact-email", "", "Email address to send contact form emails to")
+	createCollctions     = flag.Bool("create-migration", false, "Creates new migration file with snapshot of the local collections configuration")
+	migrationSync        = flag.Bool("migration-sync", false, "Ensures that the _migrations history table doesn't have references to deleted migration files")
+	autoMigrate          = flag.Bool("auto-migrate", false, "Automatically create migrations for actions taking in the admin UI")
 )
 
 func main() {
@@ -53,6 +57,22 @@ func main() {
 	}
 	if err := UpdateAdmin(app, *adminEmail, *adminPassword); err != nil {
 		log.Fatal(err)
+	}
+	blankCommand := &cobra.Command{}
+	migratecmd.MustRegister(app, blankCommand, &migratecmd.Options{Automigrate: *autoMigrate})
+	blankCommand.SetArgs([]string{"migrate", "up"})
+	if err := blankCommand.Execute(); err != nil {
+		log.Fatalf("Unable to migrate: %s", err)
+	}
+	if *createCollctions {
+		blankCommand.SetArgs([]string{"migrate", "collections"})
+		_ = blankCommand.Execute()
+		return
+	}
+	if *migrationSync {
+		blankCommand.SetArgs([]string{"migrate", "history-sync"})
+		_ = blankCommand.Execute()
+		return
 	}
 	wom.ConfigurePocketBase(app, app.Dao(), app.NewMailClient(), *contactEmail, *siteURL, app.Settings().Meta.SenderName,
 		app.Settings().Meta.SenderAddress, *hcaptchatSecretKey, *hcaptchaSiteKey, *mailinglistSecretKey, *webhookURL)
