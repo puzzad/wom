@@ -15,7 +15,7 @@ func init() {
 			{
 				"id": "8480lghxmlrhtn6",
 				"created": "2023-07-08 16:30:10.635Z",
-				"updated": "2023-07-09 21:58:46.860Z",
+				"updated": "2023-07-10 18:36:37.726Z",
 				"name": "hints",
 				"type": "base",
 				"system": false,
@@ -85,7 +85,7 @@ func init() {
 			{
 				"id": "mlrnksy9yxm2dmv",
 				"created": "2023-07-08 16:30:10.635Z",
-				"updated": "2023-07-10 18:14:50.762Z",
+				"updated": "2023-07-10 18:36:37.726Z",
 				"name": "mailinglist",
 				"type": "base",
 				"system": false,
@@ -115,7 +115,7 @@ func init() {
 			{
 				"id": "t6dabzlosjg7sdb",
 				"created": "2023-07-08 16:30:10.636Z",
-				"updated": "2023-07-09 21:58:46.860Z",
+				"updated": "2023-07-10 18:36:37.726Z",
 				"name": "usedhints",
 				"type": "base",
 				"system": false,
@@ -162,7 +162,7 @@ func init() {
 			{
 				"id": "dsyy96h6bthpiev",
 				"created": "2023-07-08 16:30:10.636Z",
-				"updated": "2023-07-09 21:58:46.860Z",
+				"updated": "2023-07-10 18:36:37.726Z",
 				"name": "adventures",
 				"type": "base",
 				"system": false,
@@ -276,7 +276,7 @@ func init() {
 			{
 				"id": "pcfz1rdnine760h",
 				"created": "2023-07-08 16:30:10.636Z",
-				"updated": "2023-07-09 21:58:46.860Z",
+				"updated": "2023-07-10 18:36:37.726Z",
 				"name": "guesses",
 				"type": "base",
 				"system": false,
@@ -345,7 +345,7 @@ func init() {
 			{
 				"id": "k5593ds7n07c487",
 				"created": "2023-07-08 16:30:10.636Z",
-				"updated": "2023-07-09 21:58:46.860Z",
+				"updated": "2023-07-10 18:36:37.726Z",
 				"name": "puzzles",
 				"type": "base",
 				"system": false,
@@ -432,7 +432,7 @@ func init() {
 			{
 				"id": "vztgyvjzre4vxaf",
 				"created": "2023-07-08 16:30:10.636Z",
-				"updated": "2023-07-09 21:58:46.860Z",
+				"updated": "2023-07-10 18:36:37.726Z",
 				"name": "games",
 				"type": "auth",
 				"system": false,
@@ -543,7 +543,7 @@ func init() {
 			{
 				"id": "03oa5ildtnmrxsn",
 				"created": "2023-07-08 16:30:10.637Z",
-				"updated": "2023-07-09 21:58:46.860Z",
+				"updated": "2023-07-10 18:36:37.727Z",
 				"name": "answers",
 				"type": "base",
 				"system": false,
@@ -588,14 +588,14 @@ func init() {
 			{
 				"id": "djlovsu233v2617",
 				"created": "2023-07-08 23:24:57.624Z",
-				"updated": "2023-07-09 21:58:46.861Z",
+				"updated": "2023-07-10 18:36:37.728Z",
 				"name": "currenthints",
 				"type": "view",
 				"system": false,
 				"schema": [
 					{
 						"system": false,
-						"id": "02cfaoxh",
+						"id": "mtesco6l",
 						"name": "title",
 						"type": "text",
 						"required": false,
@@ -608,7 +608,7 @@ func init() {
 					},
 					{
 						"system": false,
-						"id": "domvflwf",
+						"id": "mmmvgvfq",
 						"name": "message",
 						"type": "json",
 						"required": false,
@@ -617,7 +617,7 @@ func init() {
 					},
 					{
 						"system": false,
-						"id": "un5qq9sl",
+						"id": "cnrcq1kw",
 						"name": "locked",
 						"type": "json",
 						"required": false,
@@ -626,7 +626,7 @@ func init() {
 					},
 					{
 						"system": false,
-						"id": "zr69ukop",
+						"id": "upzibpqs",
 						"name": "puzzleid",
 						"type": "relation",
 						"required": false,
@@ -653,7 +653,7 @@ func init() {
 			{
 				"id": "_pb_users_auth_",
 				"created": "2023-07-09 00:20:19.016Z",
-				"updated": "2023-07-09 21:58:46.860Z",
+				"updated": "2023-07-10 18:36:37.727Z",
 				"name": "users",
 				"type": "auth",
 				"system": false,
@@ -728,14 +728,14 @@ func init() {
 			{
 				"id": "54fmr4z92ksrbwy",
 				"created": "2023-07-09 19:06:47.721Z",
-				"updated": "2023-07-09 21:58:46.861Z",
+				"updated": "2023-07-10 18:36:37.729Z",
 				"name": "solvetimes",
 				"type": "view",
 				"system": false,
 				"schema": [
 					{
 						"system": false,
-						"id": "gha5wga5",
+						"id": "ljgr6hhp",
 						"name": "title",
 						"type": "text",
 						"required": false,
@@ -748,7 +748,7 @@ func init() {
 					},
 					{
 						"system": false,
-						"id": "rlgdsomw",
+						"id": "ot0xo1hg",
 						"name": "timeSolved",
 						"type": "json",
 						"required": false,
@@ -757,7 +757,7 @@ func init() {
 					},
 					{
 						"system": false,
-						"id": "68lknmxs",
+						"id": "gltcykwz",
 						"name": "gameStart",
 						"type": "date",
 						"required": false,
@@ -769,7 +769,7 @@ func init() {
 					},
 					{
 						"system": false,
-						"id": "0jrswlxs",
+						"id": "rqpkegbd",
 						"name": "gameCode",
 						"type": "text",
 						"required": false,
@@ -782,7 +782,7 @@ func init() {
 					},
 					{
 						"system": false,
-						"id": "ybahzmh6",
+						"id": "4kilszrr",
 						"name": "usedhints",
 						"type": "number",
 						"required": false,
