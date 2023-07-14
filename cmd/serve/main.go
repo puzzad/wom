@@ -7,6 +7,7 @@ import (
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/cmd"
+	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
@@ -59,27 +60,31 @@ func main() {
 		log.Fatalf("Failed to bootstrap: %v", err)
 	}
 
-	blankCommand := &cobra.Command{}
-	migratecmd.MustRegister(app, blankCommand, &migratecmd.Options{Automigrate: *autoMigrate})
-	blankCommand.SetArgs([]string{"migrate", "up"})
-	if err := blankCommand.Execute(); err != nil {
+	if err := runMigrationCommand(app, "up"); err != nil {
 		log.Fatalf("Unable to migrate: %s", err)
 	}
+
 	if err := UpdateSettings(app); err != nil {
 		log.Fatalf("Failed to update settings: %v", err)
 	}
+
 	if err := UpdateAdmin(app, *adminEmail, *adminPassword); err != nil {
 		log.Fatalf("Failed to set admin account: %v", err)
 	}
 
 	if *createCollections {
-		blankCommand.SetArgs([]string{"migrate", "collections"})
-		_ = blankCommand.Execute()
+		err := runMigrationCommand(app, "collections")
+		if err != nil {
+			log.Fatalf("Failed to create collections migration: %v", err)
+		}
 		return
 	}
+
 	if *migrationSync {
-		blankCommand.SetArgs([]string{"migrate", "history-sync"})
-		_ = blankCommand.Execute()
+		err := runMigrationCommand(app, "history-sync")
+		if err != nil {
+			log.Fatalf("Failed to sync migration history: %v", err)
+		}
 		return
 	}
 	wom.ConfigurePocketBase(app, app.Dao(), app.NewMailClient(), *contactEmail, *siteURL, app.Settings().Meta.SenderName,
@@ -88,8 +93,15 @@ func main() {
 	serveCmd.SetArgs([]string{"--http=0.0.0.0:8090"})
 	log.Printf("Starting wom: http://0.0.0.0:8090/_/")
 	if err := serveCmd.Execute(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error whilst serving: %v", err)
 	}
+}
+
+func runMigrationCommand(app core.App, subcommand string) error {
+	blankCommand := &cobra.Command{}
+	migratecmd.MustRegister(app, blankCommand, &migratecmd.Options{Automigrate: *autoMigrate})
+	blankCommand.SetArgs([]string{"migrate", subcommand})
+	return blankCommand.Execute()
 }
 
 func UpdateAdmin(app *pocketbase.PocketBase, email, password string) error {
