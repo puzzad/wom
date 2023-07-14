@@ -1,1 +1,0 @@
-ALTER TABLE adventures ADD COLUMN IF NOT EXISTS features jsonb NOT NULL DEFAULT '{}'::jsonb;

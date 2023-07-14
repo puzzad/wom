@@ -2,102 +2,173 @@ package wom
 
 import (
 	"bytes"
-	"context"
-	"flag"
 	"fmt"
+	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/models"
+	"github.com/pocketbase/pocketbase/tools/mailer"
 	htemplate "html/template"
+	"net/mail"
 	"path/filepath"
+	"strings"
 	ttemplate "text/template"
-
-	"github.com/mailgun/mailgun-go/v4"
 )
 
-var (
-	mailDomain = flag.String("mailgun-domain", "", "Domain to use when sending mail from mailgun")
-	mailSender = flag.String("mailgun-sender", "", "From e-mail address to use for e-mails")
-	apiKey     = flag.String("mailgun-api-key", "", "API key to use for mailgun")
-	apiBase    = flag.String("mailgun-api-base", "https://api.eu.mailgun.net/v3", "Base URL for the mailgun API")
-
-	subscriptionConfirmLink     = flag.String("subscription-confirm-link", "", "Link to send users to confirm their subscription to the mailing list")
-	subscriptionUnsubscribeLink = flag.String("subscription-unsubscribe-link", "", "Link to send users to unsubscribe from the mailing list")
-
-	contactEmail = flag.String("contact-email", "", "Email address to send contact form emails to")
-)
-
-func sendSubscriptionOptInMail(ctx context.Context, email string) error {
-	token, err := createSubscriptionJwt(email)
+func SendContactFormMail(mailClient mailer.Mailer, contactEmail, senderName, senderAddress, email string, name string, content string) error {
+	text, html, err := getTemplates("subscribed", templateData{
+		Name:    name,
+		Email:   email,
+		Message: content,
+	})
 	if err != nil {
 		return err
 	}
-
-	return sendMail(ctx, email, "Puzzad: mailing list opt-in", "optin", map[string]string{
-		"Link": fmt.Sprintf(*subscriptionConfirmLink, token),
-	})
+	message := &mailer.Message{
+		From: mail.Address{
+			Name:    senderName,
+			Address: senderAddress,
+		},
+		To: []mail.Address{{
+			Address: contactEmail,
+		}},
+		Headers: map[string]string{
+			"Reply-To": email,
+		},
+		Subject: "Contact Form",
+		Text:    text,
+		HTML:    html,
+	}
+	return mailClient.Send(message)
 }
 
-func sendSubscriptionConfirmedMail(ctx context.Context, email string) error {
-	token, err := createUnsubscribeJwt(email)
+func sendSubscriptionConfirmedMail(mailClient mailer.Mailer, siteURL, senderName, senderAddress, mailingListSecret, email string) error {
+	token, err := createUnsubscribeJwt(mailingListSecret, email)
 	if err != nil {
 		return err
 	}
-
-	return sendMail(ctx, email, "Puzzad: mailing list confirmation", "subscribed", map[string]string{
-		"Unsubscribe": fmt.Sprintf(*subscriptionUnsubscribeLink, token),
+	text, html, err := getTemplates("subscribed", templateData{
+		Link: fmt.Sprintf("%s/mail/unsubscribe/%s", siteURL, token),
 	})
-}
-
-func sendSubscriptionEndedMail(ctx context.Context, email string) error {
-	token, err := createSubscriptionJwt(email)
 	if err != nil {
 		return err
 	}
+	message := &mailer.Message{
+		From: mail.Address{
+			Name:    senderName,
+			Address: senderAddress,
+		},
+		To: []mail.Address{{
+			Address: email,
+		}},
+		Subject: "Mailinglist Confirmed",
+		Text:    text,
+		HTML:    html,
+	}
+	return mailClient.Send(message)
+}
 
-	return sendMail(ctx, email, "Puzzad: unsubscribed", "unsubscribed", map[string]string{
-		"Link": fmt.Sprintf(*subscriptionConfirmLink, token),
+func sendSubscriptionUnsubscribedMail(mailClient mailer.Mailer, siteURL, senderName, senderAddress, email string) error {
+	text, html, err := getTemplates("unsubscribed", templateData{
+		Link: fmt.Sprintf("%s/mail/subscribe", siteURL),
 	})
+	if err != nil {
+		return err
+	}
+	message := &mailer.Message{
+		From: mail.Address{
+			Name:    senderName,
+			Address: senderAddress,
+		},
+		To: []mail.Address{{
+			Address: email,
+		}},
+		Subject: "Mailinglist Unsubscribed",
+		Text:    text,
+		HTML:    html,
+	}
+	return mailClient.Send(message)
 }
 
-func SendContactFormMail(ctx context.Context, email, name, message string) error {
-	return sendMailWithReplyTo(ctx, *contactEmail, "Puzzad: Contact form", "contact", email, map[string]string{
-		"Name":    name,
-		"Email":   email,
-		"Message": message,
+func sendSubscriptionOptInMail(mailClient mailer.Mailer, siteURL, senderName, senderAddress, mailingListSecret, email string) error {
+	token, err := createSubscriptionJwt(mailingListSecret, email)
+	if err != nil {
+		fmt.Printf("Error creating subscription JWT: %s", err)
+		return err
+	}
+	text, html, err := getTemplates("optin", templateData{
+		Link: fmt.Sprintf("%s/mail/confirm/%s", token, siteURL),
 	})
+	message := &mailer.Message{
+		From: mail.Address{
+			Name:    senderName,
+			Address: senderAddress,
+		},
+		To: []mail.Address{{
+			Address: email,
+		}},
+		Subject: "Mailinglist Opt-In",
+		Text:    text,
+		HTML:    html,
+	}
+	return mailClient.Send(message)
 }
 
-func sendMail(ctx context.Context, address, subject, template string, data any) error {
-	return sendMailWithReplyTo(ctx, address, subject, template, "", data)
+func addEmailToMailingList(db *daos.Dao, email string) error {
+	mailinglist, err := db.FindCollectionByNameOrId("mailinglist")
+	if err != nil {
+		return err
+	}
+	existing, err := db.FindFirstRecordByData("mailinglist", "email", email)
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		return nil
+	}
+	record := models.NewRecord(mailinglist)
+	record.RefreshId()
+	record.Set("email", email)
+	return db.SaveRecord(record)
 }
 
-func sendMailWithReplyTo(ctx context.Context, address, subject, template, replyTo string, data any) error {
-	mg := mailgun.NewMailgun(*mailDomain, *apiKey)
-	mg.SetAPIBase(*apiBase)
+func removeEmailToMailingList(db *daos.Dao, email string) error {
+	record, err := db.FindFirstRecordByData("mailinglist", "email", email)
+	if err != nil {
+		return err
+	}
+	return db.DeleteRecord(record)
+}
 
+func validEmail(email string) bool {
+	_, err := mail.ParseAddress(email)
+	return err == nil && !strings.Contains(email, " ")
+}
+
+type templateData struct {
+	Name    string
+	Email   string
+	Message string
+	Link    string
+}
+
+func getTemplates(template string, data templateData) (string, string, error) {
 	tt, err := ttemplate.ParseFiles(filepath.Join("templates", fmt.Sprintf("%s.txt.gotpl", template)))
 	if err != nil {
-		return err
+		return "", "", err
 	}
 
 	ht, err := htemplate.ParseFiles(filepath.Join("templates", fmt.Sprintf("%s.html.gotpl", template)))
 	if err != nil {
-		return err
+		return "", "", err
 	}
 
 	twr := &bytes.Buffer{}
 	if err = tt.Execute(twr, data); err != nil {
-		return err
+		return "", "", err
 	}
 
 	hwr := &bytes.Buffer{}
 	if err = ht.Execute(hwr, data); err != nil {
-		return err
+		return "", "", err
 	}
-
-	message := mg.NewMessage(*mailSender, subject, twr.String(), address)
-	if replyTo != "" {
-		message.SetReplyTo(replyTo)
-	}
-	message.SetHtml(hwr.String())
-	_, _, err = mg.Send(ctx, message)
-	return err
+	return twr.String(), hwr.String(), nil
 }
