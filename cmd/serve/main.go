@@ -54,9 +54,7 @@ func main() {
 		DefaultDataDir: "./data",
 		DefaultDebug:   *debug,
 	})
-	migratecmd.MustRegister(app, app.RootCmd, &migratecmd.Options{
-		Automigrate: true,
-	})
+
 	if err := app.Bootstrap(); err != nil {
 		log.Fatalf("Failed to bootstrap: %v", err)
 	}
