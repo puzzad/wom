@@ -17,6 +17,7 @@ import (
 )
 
 var (
+	debug                = flag.Bool("debug", false, "Enable debuggin")
 	adminEmail           = flag.String("email", "", "Sets the initial admin email")
 	adminPassword        = flag.String("password", "", "Sets the initial admin password")
 	webhookURL           = flag.String("webhook-url", "", "Webhook to send events to {'content': 'message'}")
@@ -45,6 +46,7 @@ func main() {
 	}
 	app := pocketbase.NewWithConfig(&pocketbase.Config{
 		DefaultDataDir: "./data",
+		DefaultDebug:   *debug,
 	})
 	migratecmd.MustRegister(app, app.RootCmd, &migratecmd.Options{
 		Automigrate: true,
