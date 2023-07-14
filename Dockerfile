@@ -11,7 +11,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -trimp
 FROM gcr.io/distroless/base:nonroot
 COPY --from=build /main /wom
 COPY --from=build --chown=nonroot /go/src/app/templates /templates
-WORKDIR /home/nonroot
+WORKDIR /
 
 ENTRYPOINT ["/wom"]
 EXPOSE 3000 
