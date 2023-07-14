@@ -54,17 +54,17 @@ func main() {
 	if err := app.Bootstrap(); err != nil {
 		log.Fatal(err)
 	}
-	if err := UpdateSettings(app); err != nil {
-		log.Fatal(err)
-	}
-	if err := UpdateAdmin(app, *adminEmail, *adminPassword); err != nil {
-		log.Fatal(err)
-	}
 	blankCommand := &cobra.Command{}
 	migratecmd.MustRegister(app, blankCommand, &migratecmd.Options{Automigrate: *autoMigrate})
 	blankCommand.SetArgs([]string{"migrate", "up"})
 	if err := blankCommand.Execute(); err != nil {
 		log.Fatalf("Unable to migrate: %s", err)
+	}
+	if err := UpdateSettings(app); err != nil {
+		log.Fatal(err)
+	}
+	if err := UpdateAdmin(app, *adminEmail, *adminPassword); err != nil {
+		log.Fatal(err)
 	}
 	if *createCollctions {
 		blankCommand.SetArgs([]string{"migrate", "collections"})
