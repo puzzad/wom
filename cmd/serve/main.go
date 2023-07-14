@@ -17,31 +17,37 @@ import (
 )
 
 var (
-	debug                = flag.Bool("debug", false, "Enable debuggin")
-	adminEmail           = flag.String("email", "", "Sets the initial admin email")
-	adminPassword        = flag.String("password", "", "Sets the initial admin password")
-	webhookURL           = flag.String("webhook-url", "", "Webhook to send events to {'content': 'message'}")
-	hcaptchatSecretKey   = flag.String("hcaptcha-secret-key", "", "Secret key to use for hCaptcha")
+	debug = flag.Bool("debug", false, "Enable debugging")
+
+	adminEmail    = flag.String("email", "", "Sets the initial admin email")
+	adminPassword = flag.String("password", "", "Sets the initial admin password")
+
+	webhookURL = flag.String("webhook-url", "", "Webhook to send events to {'content': 'message'}")
+
+	hcaptchaSecretKey    = flag.String("hcaptcha-secret-key", "", "Secret key to use for hCaptcha")
 	hcaptchaSiteKey      = flag.String("hcaptcha-site-key", "", "Site key to use for hCaptcha")
 	mailinglistSecretKey = flag.String("mailinglist-secret", "", "Mailing list secret key")
-	smtpHost             = flag.String("smtp-host", "", "SMTP Host to send email via")
-	smtpPort             = flag.Int("smtp-port", 25, "SMTP Port")
-	smtpUser             = flag.String("smtp-user", "", "SMTP Username")
-	smtpPass             = flag.String("smtp-pass", "", "SMTP password")
-	smtpSenderAddress    = flag.String("smtp-sender-email", "", "SMTP Sender address")
-	smtpSenderName       = flag.String("smtp-sender-name", "", "SMTP Sender Name")
-	siteURL              = flag.String("site-url", "", "Public facing site URL")
-	siteName             = flag.String("site-name", "", "Public facing site name")
-	backups              = flag.Bool("backups", false, "If enabled, backups will be performed every day at midnight, the last 7 will be kept")
-	contactEmail         = flag.String("contact-email", "", "Email address to send contact form emails to")
-	createCollctions     = flag.Bool("create-migration", false, "Creates new migration file with snapshot of the local collections configuration")
-	migrationSync        = flag.Bool("migration-sync", false, "Ensures that the _migrations history table doesn't have references to deleted migration files")
-	autoMigrate          = flag.Bool("auto-migrate", false, "Automatically create migrations for actions taking in the admin UI")
+
+	smtpHost          = flag.String("smtp-host", "", "SMTP Host to send email via")
+	smtpPort          = flag.Int("smtp-port", 25, "SMTP Port")
+	smtpUser          = flag.String("smtp-user", "", "SMTP Username")
+	smtpPass          = flag.String("smtp-pass", "", "SMTP password")
+	smtpSenderAddress = flag.String("smtp-sender-email", "", "SMTP Sender address")
+	smtpSenderName    = flag.String("smtp-sender-name", "", "SMTP Sender Name")
+
+	siteURL      = flag.String("site-url", "", "Public facing site URL")
+	siteName     = flag.String("site-name", "", "Public facing site name")
+	backups      = flag.Bool("backups", false, "If enabled, backups will be performed every day at midnight, the last 7 will be kept")
+	contactEmail = flag.String("contact-email", "", "Email address to send contact form emails to")
+
+	createCollections = flag.Bool("create-migration", false, "Creates new migration file with snapshot of the local collections configuration")
+	migrationSync     = flag.Bool("migration-sync", false, "Ensures that the _migrations history table doesn't have references to deleted migration files")
+	autoMigrate       = flag.Bool("auto-migrate", false, "Automatically create migrations for actions taking in the admin UI")
 )
 
 func main() {
 	envflag.Parse()
-	if *hcaptchaSiteKey == "" || *hcaptchatSecretKey == "" || *mailinglistSecretKey == "" {
+	if *hcaptchaSiteKey == "" || *hcaptchaSecretKey == "" || *mailinglistSecretKey == "" {
 		log.Fatal("Missing required flags")
 	}
 	app := pocketbase.NewWithConfig(&pocketbase.Config{
@@ -52,8 +58,9 @@ func main() {
 		Automigrate: true,
 	})
 	if err := app.Bootstrap(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to bootstrap: %v", err)
 	}
+
 	blankCommand := &cobra.Command{}
 	migratecmd.MustRegister(app, blankCommand, &migratecmd.Options{Automigrate: *autoMigrate})
 	blankCommand.SetArgs([]string{"migrate", "up"})
@@ -61,12 +68,13 @@ func main() {
 		log.Fatalf("Unable to migrate: %s", err)
 	}
 	if err := UpdateSettings(app); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to update settings: %v", err)
 	}
 	if err := UpdateAdmin(app, *adminEmail, *adminPassword); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to set admin account: %v", err)
 	}
-	if *createCollctions {
+
+	if *createCollections {
 		blankCommand.SetArgs([]string{"migrate", "collections"})
 		_ = blankCommand.Execute()
 		return
@@ -77,7 +85,7 @@ func main() {
 		return
 	}
 	wom.ConfigurePocketBase(app, app.Dao(), app.NewMailClient(), *contactEmail, *siteURL, app.Settings().Meta.SenderName,
-		app.Settings().Meta.SenderAddress, *hcaptchatSecretKey, *hcaptchaSiteKey, *mailinglistSecretKey, *webhookURL)
+		app.Settings().Meta.SenderAddress, *hcaptchaSecretKey, *hcaptchaSiteKey, *mailinglistSecretKey, *webhookURL)
 	serveCmd := cmd.NewServeCommand(app, false)
 	serveCmd.SetArgs([]string{"--http=0.0.0.0:8090"})
 	log.Printf("Starting wom: http://0.0.0.0:8090/_/")
