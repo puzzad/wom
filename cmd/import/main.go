@@ -73,7 +73,7 @@ func uploadAdventures(fileName, apiurl string, email string, password string) er
 	resp, err = client.R().
 		SetContentLength(true).
 		SetFileReader("adventures.zip", "adventures.zip", file).
-		Post("/import/zip")
+		Post("/wom/importzip")
 	if err != nil {
 		return fmt.Errorf("unable to upload zip: %s", err)
 	}
