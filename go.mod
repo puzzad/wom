@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/csmith/envflag v1.0.0
 	github.com/go-chi/chi/v5 v5.0.8
-	github.com/go-chi/render v1.0.2
+	github.com/go-chi/render v1.0.3
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/jackc/pgx/v5 v5.4.1
