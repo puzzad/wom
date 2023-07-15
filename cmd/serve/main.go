@@ -41,9 +41,9 @@ var (
 	backups      = flag.Bool("backups", false, "If enabled, backups will be performed every day at midnight, the last 7 will be kept")
 	contactEmail = flag.String("contact-email", "", "Email address to send contact form emails to")
 
-	createCollections = flag.Bool("create-migration", false, "Creates new migration file with snapshot of the local collections configuration.  Will write to /migrate")
+	createCollections = flag.Bool("create-migration", false, "Creates new migration file with snapshot of the local collections configuration.  Will write to /migrations")
 	migrationSync     = flag.Bool("migration-sync", false, "Ensures that the _migrations history table doesn't have references to deleted migration files")
-	autoMigrate       = flag.Bool("auto-migrate", false, "Automatically create migrations for actions taking in the admin UI.  Will write these to /migrate")
+	autoMigrate       = flag.Bool("auto-migrate", false, "Automatically create migrations for actions taking in the admin UI.  Will write these to /migrations")
 
 	required = []string{
 		"hcaptcha-site-key",
