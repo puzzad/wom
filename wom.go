@@ -11,23 +11,25 @@ import (
 )
 
 func sendWebhook(webHookURL, message string) {
-	type webhook struct {
-		Content string `json:"content"`
-	}
-	if len(webHookURL) == 0 {
-		return
-	}
-	data := &webhook{
-		Content: message,
-	}
-	dataBytes, err := json.Marshal(data)
-	if err != nil {
-		return
-	}
-	_, err = http.Post(webHookURL, "application/json", bytes.NewReader(dataBytes))
-	if err != nil {
-		return
-	}
+	go func() {
+		type webhook struct {
+			Content string `json:"content"`
+		}
+		if len(webHookURL) == 0 {
+			return
+		}
+		data := &webhook{
+			Content: message,
+		}
+		dataBytes, err := json.Marshal(data)
+		if err != nil {
+			return
+		}
+		_, err = http.Post(webHookURL, "application/json", bytes.NewReader(dataBytes))
+		if err != nil {
+			return
+		}
+	}()
 }
 
 func checkGuess(app *pocketbase.PocketBase, r *models.Record) bool {
