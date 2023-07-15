@@ -25,12 +25,12 @@ var embedded embed.FS
 
 var siteFS = echo.MustSubFS(embedded, "site")
 
-func createWomRoutesHook(app *pocketbase.PocketBase, db *daos.Dao, mailClient mailer.Mailer, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string) func(e *core.ServeEvent) error {
+func createWomRoutesHook(app *pocketbase.PocketBase, db *daos.Dao, mailClient mailer.Mailer, webhookURL, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string) func(e *core.ServeEvent) error {
 	return func(e *core.ServeEvent) error {
-		_ = e.Router.POST("/wom/startadventure", handleStartAdventure(db, app))
-		_ = e.Router.POST("/wom/startgame", handleStartGame(db))
+		_ = e.Router.POST("/wom/startadventure", handleStartAdventure(db, app, webhookURL))
+		_ = e.Router.POST("/wom/startgame", handleStartGame(db, webhookURL))
 		_ = e.Router.POST("/wom/importzip", handleAdventureImport(db, app), apis.RequireAdminAuth())
-		_ = e.Router.POST("/wom/requesthint", handleHintRequest(db))
+		_ = e.Router.POST("/wom/requesthint", handleHintRequest(db, webhookURL))
 		_ = e.Router.POST("/wom/contact", handleContactForm(mailClient, contactEmail, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey))
 		_ = e.Router.POST("/wom/subscribe", handleSubscribe(db, mailClient, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret))
 		_ = e.Router.GET("/wom/confirm/:token", handleConfirm(db, mailClient, siteURL, senderName, senderAddress, mailingListSecret))
@@ -40,7 +40,7 @@ func createWomRoutesHook(app *pocketbase.PocketBase, db *daos.Dao, mailClient ma
 	}
 }
 
-func handleStartAdventure(db *daos.Dao, app core.App) func(echo.Context) error {
+func handleStartAdventure(db *daos.Dao, app core.App, webhookURL string) func(echo.Context) error {
 	return func(c echo.Context) error {
 		type req struct {
 			Adventure string `json:"adventure"`
@@ -83,6 +83,7 @@ func handleStartAdventure(db *daos.Dao, app core.App) func(echo.Context) error {
 		if err = form.Submit(); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to add adventure"})
 		}
+		sendWebhook(webhookURL, fmt.Sprintf("New game created: `%s` (adventure: %s)", code, data.Adventure))
 		currentGames := user.GetStringSlice("games")
 		currentGames = append(currentGames, record.Id)
 		user.Set("games", currentGames)
@@ -95,7 +96,7 @@ func handleStartAdventure(db *daos.Dao, app core.App) func(echo.Context) error {
 	}
 }
 
-func handleStartGame(db *daos.Dao) func(echo.Context) error {
+func handleStartGame(db *daos.Dao, webhookURL string) func(echo.Context) error {
 	return func(c echo.Context) error {
 		type req struct {
 			Code string `json:"game"`
@@ -119,6 +120,7 @@ func handleStartGame(db *daos.Dao) func(echo.Context) error {
 			fmt.Printf("Rows: %d\n", rows)
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to start game 3"})
 		}
+		sendWebhook(webhookURL, fmt.Sprintf(":checkered_flag: `%s` started", data.Code))
 		return nil
 	}
 }
@@ -185,7 +187,7 @@ func handleAdventureImport(db *daos.Dao, fso fileSystemOpener) func(c echo.Conte
 	}
 }
 
-func handleHintRequest(db *daos.Dao) echo.HandlerFunc {
+func handleHintRequest(db *daos.Dao, webhookURL string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		game, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
 		if game == nil {
@@ -223,6 +225,7 @@ func handleHintRequest(db *daos.Dao) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "unable to request hint"})
 		}
+		sendWebhook(webhookURL, fmt.Sprintf(":bulb: `%s`/`%s`: hint requested: `%s`", game.Get("username"), game.Get("puzzle"), data.Hint))
 		return c.JSON(http.StatusOK, "")
 	}
 }
