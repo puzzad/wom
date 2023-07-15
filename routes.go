@@ -83,7 +83,7 @@ func handleStartAdventure(db *daos.Dao, app core.App, webhookURL string) func(ec
 		if err = form.Submit(); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to add adventure"})
 		}
-		sendWebhook(webhookURL, fmt.Sprintf("New game created: `%s` (adventure: %s)", code, data.Adventure))
+		sendWebhook(webhookURL, fmt.Sprintf("New game created: `%s` (adventure: %s)", code, adventure.Get("name")))
 		currentGames := user.GetStringSlice("games")
 		currentGames = append(currentGames, record.Id)
 		user.Set("games", currentGames)
