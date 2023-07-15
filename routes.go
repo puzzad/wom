@@ -14,6 +14,7 @@ import (
 	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/mailer"
+	"log"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -31,12 +32,44 @@ func createWomRoutesHook(app *pocketbase.PocketBase, db *daos.Dao, mailClient ma
 		_ = e.Router.POST("/wom/startgame", handleStartGame(db, webhookURL))
 		_ = e.Router.POST("/wom/importzip", handleAdventureImport(db, app), apis.RequireAdminAuth())
 		_ = e.Router.POST("/wom/requesthint", handleHintRequest(db, webhookURL))
+		_ = e.Router.GET("/wom/gethints", getHints(db))
 		_ = e.Router.POST("/wom/contact", handleContactForm(mailClient, contactEmail, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey))
 		_ = e.Router.POST("/wom/subscribe", handleSubscribe(db, mailClient, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret))
 		_ = e.Router.GET("/wom/confirm/:token", handleConfirm(db, mailClient, siteURL, senderName, senderAddress, mailingListSecret))
 		_ = e.Router.GET("/wom/unsubscribe/:token", handleUnsubscribe(db, mailClient, siteURL, senderName, senderAddress, mailingListSecret))
 		e.Router.GET("/*", apis.StaticDirectoryHandler(siteFS, true))
 		return nil
+	}
+}
+
+func getHints(db *daos.Dao) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		type res struct {
+			Id      string `json:"id"`
+			Title   string `json:"title"`
+			Message string `json:"message"`
+		}
+		game, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
+		if game == nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Game not found"})
+		}
+		puzzle := game.GetString("puzzle")
+		if puzzle == "" {
+			return c.NoContent(http.StatusNoContent)
+		}
+		var data []res
+		err := db.DB().
+			Select("hints.id as id", "hints.title as title", "IIF(usedhints.id ISNULL, '', hints.message) as message").
+			From("hints").
+			LeftJoin("usedhints", dbx.NewExp("hints.id=usedhints.hint AND usedhints.game={:gameID}", dbx.Params{"gameID": game.Id})).
+			AndWhere(dbx.HashExp{"hints.puzzle": puzzle}).
+			OrderBy("hints.order").
+			All(&data)
+		if err != nil {
+			log.Printf("Error getting hints: %s", err)
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Error getting hints"})
+		}
+		return c.JSON(http.StatusOK, data)
 	}
 }
 
