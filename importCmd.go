@@ -191,7 +191,7 @@ func checkAdventure(zfs fs.FS, name string, prod bool) *adventure {
 	}
 
 	price := readTextFile(zfs, filepath.Join(name, "PRICE"))
-	description := readTextFile(zfs, filepath.Join(name, "description.html"))
+	description := replaceVariables(zfs, readTextFile(zfs, filepath.Join(name, "description.html")), name)
 	private := exists(zfs, filepath.Join(name, "PRIVATE"))
 	devOnly := exists(zfs, filepath.Join(name, "DEVONLY"))
 	features := parseJsonFile(zfs, filepath.Join(name, "features.json"), &adventureFeatures{})
