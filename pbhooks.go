@@ -61,21 +61,23 @@ func createGuessCreatedHook(app *pocketbase.PocketBase, webhookURL string) func(
 		if err != nil {
 			return err
 		}
-		go func() {
-			if e.Record.Get("correct").(bool) && puzzle.Get("next") == "" {
-				sendWebhook(webhookURL, fmt.Sprintf(":tada: %s/%s: %s", game.Get("username"), puzzle.Get("title"), e.Record.Get("content")))
-				sendWebhook(webhookURL, fmt.Sprintf(":checkered_flag:  %s finished", game.Get("username")))
+		guessCorrect := e.Record.GetBool("correct")
+		nextPuzzle := puzzle.Get("next")
+		go func(gameCode, puzzleTitle, guessText string) {
+			if guessCorrect && nextPuzzle == "" {
+				sendWebhook(webhookURL, fmt.Sprintf(":tada: %s/%s: %s", gameCode, puzzleTitle, guessText))
+				sendWebhook(webhookURL, fmt.Sprintf(":checkered_flag:  %s finished", gameCode))
 			} else {
-				sendWebhook(webhookURL, fmt.Sprintf(":x: %s/%s: %s", game.Get("username"), puzzle.Get("title"), e.Record.Get("content")))
+				sendWebhook(webhookURL, fmt.Sprintf(":x: %s/%s: %s", gameCode, puzzleTitle, guessText))
 			}
-		}()
-		if e.Record.Get("correct").(bool) {
+		}(game.GetString("username"), puzzle.GetString("title"), e.Record.GetString("content"))
+		if guessCorrect && nextPuzzle == "" {
 			if puzzle.Get("next") == "" {
 				game.Set("puzzle", nil)
 				game.Set("status", "EXPIRED")
 				game.Set("end", time.Now())
 			} else {
-				game.Set("puzzle", puzzle.Get("next"))
+				game.Set("puzzle", guessCorrect)
 			}
 			return app.Dao().SaveRecord(game)
 		}
