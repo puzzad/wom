@@ -46,6 +46,16 @@ var (
 	autoMigrate       = flag.Bool("auto-migrate", false, "Automatically create migrations for actions taking in the admin UI.  Will write these to /migrations")
 	dataDirectory     = flag.String("data-dir", "/data", "Directory to store database and backups")
 
+	googleAuth    = flag.Bool("google-auth", false, "Enable Google oauth")
+	googleID      = flag.String("google-id", "", "Google oauth client ID")
+	googleSecret  = flag.String("google-secret", "", "Google oauth client secret")
+	discordAuth   = flag.Bool("discord-auth", false, "Enable Discord oauth")
+	discordID     = flag.String("discord-id", "", "Discord oauth client ID")
+	discordSecret = flag.String("discord-secret", "", "Discord oauth client secret")
+	twitchAuth    = flag.Bool("twitch-auth", false, "Enable Twitch oauth")
+	twitchID      = flag.String("twitch-id", "", "Twitch oauth client ID")
+	twitchSecret  = flag.String("twitch-secret", "", "Twitch oauth client secret")
+
 	required = []string{
 		"hcaptcha-site-key",
 		"hcaptcha-secret-key",
@@ -194,6 +204,19 @@ func UpdateSettings(app *pocketbase.PocketBase) error {
 		form.Backups.Cron = "0 0 * * *"
 		form.Backups.CronMaxKeep = 7
 	}
+
+	form.GoogleAuth.Enabled = *googleAuth
+	form.GoogleAuth.ClientId = *googleID
+	form.GoogleAuth.ClientSecret = *googleSecret
+
+	form.DiscordAuth.Enabled = *discordAuth
+	form.DiscordAuth.ClientId = *discordID
+	form.DiscordAuth.ClientSecret = *discordSecret
+
+	form.TwitchAuth.Enabled = *twitchAuth
+	form.TwitchAuth.ClientId = *twitchID
+	form.TwitchAuth.ClientSecret = *twitchSecret
+
 	return form.Submit()
 }
 
