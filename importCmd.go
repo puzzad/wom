@@ -267,6 +267,7 @@ func parseJsonFile[T interface{}](zfs fs.FS, name string, parsed *T) *T {
 func replaceVariables(zfs fs.FS, content, path string) (output string) {
 	matcher := regexp.MustCompile(`\$(.*?)\$`)
 	matches := matcher.FindAllString(content, -1)
+	output = content
 	if matches != nil {
 		for _, match := range matches {
 			filename := match[1 : len(match)-1]
@@ -277,10 +278,8 @@ func replaceVariables(zfs fs.FS, content, path string) (output string) {
 			contentType := http.DetectContentType(fileBytes)
 			b64 := base64.StdEncoding.EncodeToString(fileBytes)
 			datauri := fmt.Sprintf("data:%s;base64,%s", contentType, b64)
-			output = strings.ReplaceAll(content, match, datauri)
+			output = strings.ReplaceAll(output, match, datauri)
 		}
-	} else {
-		output = content
 	}
 	return output
 }
