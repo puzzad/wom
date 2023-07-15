@@ -61,19 +61,24 @@ func createGuessCreatedHook(app *pocketbase.PocketBase, webhookURL string) func(
 		if err != nil {
 			return err
 		}
+		go func() {
+			if e.Record.Get("correct").(bool) && puzzle.Get("next") == "" {
+				sendWebhook(webhookURL, fmt.Sprintf(":tada: %s/%s: %s", game.Get("username"), puzzle.Get("title"), e.Record.Get("content")))
+				sendWebhook(webhookURL, fmt.Sprintf(":checkered_flag:  %s finished", game.Get("username")))
+			} else {
+				sendWebhook(webhookURL, fmt.Sprintf(":x: %s/%s: %s", game.Get("username"), puzzle.Get("title"), e.Record.Get("content")))
+			}
+		}()
 		if e.Record.Get("correct").(bool) {
-			sendWebhook(webhookURL, fmt.Sprintf(":tada: %s/%s: %s", game.Get("username"), puzzle.Get("title"), e.Record.Get("content")))
 			if puzzle.Get("next") == "" {
 				game.Set("puzzle", nil)
 				game.Set("status", "EXPIRED")
 				game.Set("end", time.Now())
-				sendWebhook(webhookURL, fmt.Sprintf(":checkered_flag:  %s finished", game.Get("username")))
 			} else {
 				game.Set("puzzle", puzzle.Get("next"))
 			}
 			return app.Dao().SaveRecord(game)
 		}
-		sendWebhook(webhookURL, fmt.Sprintf(":x: %s/%s: %s", game.Get("username"), puzzle.Get("title"), e.Record.Get("content")))
 		return nil
 	}
 }
