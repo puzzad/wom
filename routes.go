@@ -225,7 +225,14 @@ func handleHintRequest(db *daos.Dao, webhookURL string) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "unable to request hint"})
 		}
-		sendWebhook(webhookURL, fmt.Sprintf(":bulb: `%s`/`%s`: hint requested: `%s`", game.Get("username"), game.Get("puzzle"), data.Hint))
+		go func() {
+			hint, err := db.FindRecordById("hints", data.Hint)
+			if err != nil {
+				return
+			}
+			puzzle, err := db.FindRecordById("puzzles", game.GetString("puzzle"))
+			sendWebhook(webhookURL, fmt.Sprintf(":bulb: `%s`/`%s`: hint requested: `%s`", game.Get("username"), puzzle.Get("title"), hint.Get("title")))
+		}()
 		return c.JSON(http.StatusOK, "")
 	}
 }

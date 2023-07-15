@@ -67,6 +67,7 @@ func createGuessCreatedHook(app *pocketbase.PocketBase, webhookURL string) func(
 				game.Set("puzzle", nil)
 				game.Set("status", "EXPIRED")
 				game.Set("end", time.Now())
+				sendWebhook(webhookURL, fmt.Sprintf(":checkered_flag:  %s finished", game.Get("username")))
 			} else {
 				game.Set("puzzle", puzzle.Get("next"))
 			}
