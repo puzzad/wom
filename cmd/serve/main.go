@@ -44,9 +44,20 @@ var (
 	createCollections = flag.Bool("create-migration", false, "Creates new migration file with snapshot of the local collections configuration")
 	migrationSync     = flag.Bool("migration-sync", false, "Ensures that the _migrations history table doesn't have references to deleted migration files")
 	autoMigrate       = flag.Bool("auto-migrate", false, "Automatically create migrations for actions taking in the admin UI")
+
+	required = []string{
+		"hcaptcha-site-key",
+		"hcaptcha-secret-key",
+		"mailinglist-secret",
+		"site-name",
+		"site-url",
+		"smtp-sender-name",
+		"smtp-sender-email",
+	}
 )
 
 func main() {
+	updateRequiredFlagsUsage()
 	envflag.Parse()
 	checkRequiredFlags()
 
@@ -109,16 +120,15 @@ func main() {
 	}
 }
 
+func updateRequiredFlagsUsage() {
+	flag.VisitAll(func(f *flag.Flag) {
+		if contains(required, f.Name) {
+			f.Usage = fmt.Sprintf("%s [REQUIRED]", f.Usage)
+		}
+	})
+}
+
 func checkRequiredFlags() {
-	required := []string{
-		"hcaptcha-site-key",
-		"hcaptcha-secret-key",
-		"mailinglist-secret",
-		"site-name",
-		"site-url",
-		"smtp-sender-name",
-		"smtp-sender-email",
-	}
 	seen := make(map[string]bool)
 	flag.VisitAll(func(f *flag.Flag) {
 		seen[f.Name] = true
@@ -184,4 +194,14 @@ func UpdateSettings(app *pocketbase.PocketBase) error {
 		form.Backups.CronMaxKeep = 7
 	}
 	return form.Submit()
+}
+
+func contains[T comparable](s []T, e T) bool {
+	// TODO: Remove in go 1.21
+	for _, v := range s {
+		if v == e {
+			return true
+		}
+	}
+	return false
 }
