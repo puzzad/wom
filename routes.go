@@ -120,7 +120,7 @@ func handleStartGame(db *daos.Dao, webhookURL string) func(echo.Context) error {
 			fmt.Printf("Rows: %d\n", rows)
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to start game 3"})
 		}
-		sendWebhook(webhookURL, fmt.Sprintf(":checkered_flag: `%s` started", data.Code))
+		sendWebhook(webhookURL, fmt.Sprintf(":rocket: `%s` started", data.Code))
 		return nil
 	}
 }
