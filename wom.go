@@ -8,6 +8,7 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 	"log"
 	"net/http"
+	"strings"
 )
 
 func sendWebhook(webHookURL, message string) {
@@ -33,7 +34,7 @@ func sendWebhook(webHookURL, message string) {
 }
 
 func checkGuess(app *pocketbase.PocketBase, r *models.Record) bool {
-	content := r.Get("content")
+	content := strings.ToLower(r.GetString("content"))
 	puzzle := r.Get("puzzle")
 	var count string
 	err := app.Dao().DB().Select("count(*)").From("answers").
