@@ -48,9 +48,8 @@ var (
 
 func main() {
 	envflag.Parse()
-	if *hcaptchaSiteKey == "" || *hcaptchaSecretKey == "" || *mailinglistSecretKey == "" {
-		log.Fatal("Missing required flags")
-	}
+	checkRequiredFlags()
+
 	app := pocketbase.NewWithConfig(&pocketbase.Config{
 		DefaultDataDir: "./data",
 		DefaultDebug:   *debug,
@@ -87,13 +86,48 @@ func main() {
 		}
 		return
 	}
-	wom.ConfigurePocketBase(app, app.Dao(), app.NewMailClient(), *contactEmail, *siteURL, app.Settings().Meta.SenderName,
-		app.Settings().Meta.SenderAddress, *hcaptchaSecretKey, *hcaptchaSiteKey, *mailinglistSecretKey, *webhookURL)
+
+	wom.ConfigurePocketBase(
+		app,
+		app.Dao(),
+		app.NewMailClient(),
+		*contactEmail,
+		*siteURL,
+		app.Settings().Meta.SenderName,
+		app.Settings().Meta.SenderAddress,
+		*hcaptchaSecretKey,
+		*hcaptchaSiteKey,
+		*mailinglistSecretKey,
+		*webhookURL,
+	)
+
 	serveCmd := cmd.NewServeCommand(app, false)
 	serveCmd.SetArgs([]string{"--http=0.0.0.0:8090"})
 	log.Printf("Starting wom: http://0.0.0.0:8090/_/")
 	if err := serveCmd.Execute(); err != nil {
 		log.Fatalf("Error whilst serving: %v", err)
+	}
+}
+
+func checkRequiredFlags() {
+	required := []string{
+		"hcaptcha-site-key",
+		"hcaptcha-secret-key",
+		"mailinglist-secret",
+		"site-name",
+		"site-url",
+		"smtp-sender-name",
+		"smtp-sender-email",
+	}
+	seen := make(map[string]bool)
+	flag.VisitAll(func(f *flag.Flag) {
+		seen[f.Name] = true
+	})
+
+	for _, r := range required {
+		if !seen[r] {
+			log.Fatalf("Missing required flag: %s", r)
+		}
 	}
 }
 
