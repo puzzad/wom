@@ -44,6 +44,7 @@ var (
 	createCollections = flag.Bool("create-migration", false, "Creates new migration file with snapshot of the local collections configuration.  Will write to /migrations")
 	migrationSync     = flag.Bool("migration-sync", false, "Ensures that the _migrations history table doesn't have references to deleted migration files")
 	autoMigrate       = flag.Bool("auto-migrate", false, "Automatically create migrations for actions taking in the admin UI.  Will write these to /migrations")
+	dataDirectory     = flag.String("data-dir", "/data", "Directory to store database and backups")
 
 	required = []string{
 		"hcaptcha-site-key",
@@ -62,7 +63,7 @@ func main() {
 	checkRequiredFlags()
 
 	app := pocketbase.NewWithConfig(&pocketbase.Config{
-		DefaultDataDir: "/data",
+		DefaultDataDir: *dataDirectory,
 		DefaultDebug:   *debug,
 	})
 
