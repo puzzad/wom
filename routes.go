@@ -7,11 +7,9 @@ import (
 	"github.com/csmith/aca"
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/daos"
-	"github.com/pocketbase/pocketbase/forms"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/mailer"
 	"log"
@@ -26,11 +24,11 @@ var embedded embed.FS
 
 var siteFS = echo.MustSubFS(embedded, "site")
 
-func createWomRoutesHook(app *pocketbase.PocketBase, db *daos.Dao, mailClient mailer.Mailer, webhookURL, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string) func(e *core.ServeEvent) error {
+func createWomRoutesHook(fso fileSystemOpener, db *daos.Dao, mailClient mailer.Mailer, webhookURL, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string) func(e *core.ServeEvent) error {
 	return func(e *core.ServeEvent) error {
-		_ = e.Router.POST("/wom/startadventure", handleStartAdventure(db, app, webhookURL))
+		_ = e.Router.POST("/wom/startadventure", handleStartAdventure(db, webhookURL))
 		_ = e.Router.POST("/wom/startgame", handleStartGame(db, webhookURL))
-		_ = e.Router.POST("/wom/importzip", handleAdventureImport(db, app), apis.RequireAdminAuth())
+		_ = e.Router.POST("/wom/importzip", handleAdventureImport(db, fso), apis.RequireAdminAuth())
 		_ = e.Router.POST("/wom/requesthint", handleHintRequest(db, webhookURL))
 		_ = e.Router.GET("/wom/gethints", getHints(db))
 		_ = e.Router.POST("/wom/contact", handleContactForm(mailClient, contactEmail, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey))
@@ -73,7 +71,7 @@ func getHints(db *daos.Dao) echo.HandlerFunc {
 	}
 }
 
-func handleStartAdventure(db *daos.Dao, app core.App, webhookURL string) func(echo.Context) error {
+func handleStartAdventure(db *daos.Dao, webhookURL string) func(echo.Context) error {
 	return func(c echo.Context) error {
 		type req struct {
 			Adventure string `json:"adventure"`
@@ -103,24 +101,22 @@ func handleStartAdventure(db *daos.Dao, app core.App, webhookURL string) func(ec
 		}
 		code := acaGen.Generate()
 		record := models.NewRecord(collection)
-		form := forms.NewRecordUpsert(app, record)
 		record.RefreshId()
-		err = form.LoadData(map[string]any{
-			"status":          "PAID",
-			"user":            user.Id,
-			"adventure":       adventure.Id,
-			"username":        code,
-			"password":        "puzzad",
-			"passwordConfirm": "puzzad",
-		})
-		if err = form.Submit(); err != nil {
+		record.Set("status", "PAID")
+		record.Set("user", user.Id)
+		record.Set("adventure", adventure.Id)
+		record.Set("username", code)
+		record.Set("password", "puzzad")
+		record.Set("passwordConfirm", "puzzad")
+		err = db.SaveRecord(record)
+		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to add adventure"})
 		}
 		sendWebhook(webhookURL, fmt.Sprintf("New game created: `%s` (adventure: %s)", code, adventure.Get("name")))
 		currentGames := user.GetStringSlice("games")
 		currentGames = append(currentGames, record.Id)
 		user.Set("games", currentGames)
-		err = app.Dao().SaveRecord(user)
+		err = db.SaveRecord(user)
 		if err != nil {
 			fmt.Printf("Unable to add Adventure: %v\n", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to add game to user"})

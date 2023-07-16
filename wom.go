@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/daos"
-	"github.com/pocketbase/pocketbase/models"
 	"log"
 	"net/http"
-	"strings"
 )
 
 func sendWebhook(webHookURL, message string) {
@@ -33,10 +31,8 @@ func sendWebhook(webHookURL, message string) {
 	}()
 }
 
-func checkGuess(db *daos.Dao, r *models.Record) bool {
-	content := strings.ToLower(r.GetString("content"))
-	puzzle := r.Get("puzzle")
-	records, err := db.FindRecordsByExpr("answers", dbx.HashExp{"puzzle": puzzle, "content": content})
+func checkGuess(db *daos.Dao, puzzleID, guess string) bool {
+	records, err := db.FindRecordsByExpr("answers", dbx.HashExp{"puzzle": puzzleID, "content": guess})
 	if err != nil {
 		log.Printf("Error checking guess: %s", err)
 		return false

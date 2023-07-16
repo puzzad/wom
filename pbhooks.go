@@ -8,6 +8,7 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/mailer"
+	"strings"
 	"time"
 )
 
@@ -46,7 +47,9 @@ func preserveOriginalFilenames(uploadedFiles map[string][]*filesystem.File, reco
 
 func createBeforeGuessCreatedHook(db *daos.Dao) func(e *core.RecordCreateEvent) error {
 	return func(e *core.RecordCreateEvent) error {
-		e.Record.Set("correct", checkGuess(db, e.Record))
+		guess := strings.ToLower(e.Record.GetString("content"))
+		puzzle := e.Record.GetString("puzzle")
+		e.Record.Set("correct", checkGuess(db, puzzle, guess))
 		return nil
 	}
 }
