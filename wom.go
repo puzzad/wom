@@ -36,14 +36,10 @@ func sendWebhook(webHookURL, message string) {
 func checkGuess(app *pocketbase.PocketBase, r *models.Record) bool {
 	content := strings.ToLower(r.GetString("content"))
 	puzzle := r.Get("puzzle")
-	var count string
-	err := app.Dao().DB().Select("count(*)").From("answers").
-		AndWhere(dbx.HashExp{"puzzle": puzzle}).
-		AndWhere(dbx.HashExp{"content": content}).
-		Row(&count)
+	records, err := app.Dao().FindRecordsByExpr("answers", dbx.HashExp{"puzzle": puzzle, "content": content})
 	if err != nil {
 		log.Printf("Error checking guess: %s", err)
 		return false
 	}
-	return count == "1"
+	return len(records) == 1
 }
