@@ -15,8 +15,8 @@ func ConfigurePocketBase(app *pocketbase.PocketBase, db *daos.Dao, mailClient ma
 	app.OnBeforeServe().Add(createWomRoutesHook(app, db, mailClient, webhookURL, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret))
 	app.OnRecordBeforeUpdateRequest("adventures").Add(createPreserveFilenameUpdateHook)
 	app.OnRecordBeforeCreateRequest("adventures").Add(createPreserveFilenameCreateHook)
-	app.OnRecordBeforeCreateRequest("guesses").Add(createBeforeGuessCreatedHook(app))
-	app.OnRecordAfterCreateRequest("guesses").Add(createGuessCreatedHook(app, webhookURL))
+	app.OnRecordBeforeCreateRequest("guesses").Add(createBeforeGuessCreatedHook(db))
+	app.OnRecordAfterCreateRequest("guesses").Add(createGuessCreatedHook(db, webhookURL))
 }
 
 func preserveOriginalFilenames(uploadedFiles map[string][]*filesystem.File, record *models.Record) error {
@@ -44,20 +44,20 @@ func preserveOriginalFilenames(uploadedFiles map[string][]*filesystem.File, reco
 	return nil
 }
 
-func createBeforeGuessCreatedHook(app *pocketbase.PocketBase) func(e *core.RecordCreateEvent) error {
+func createBeforeGuessCreatedHook(db *daos.Dao) func(e *core.RecordCreateEvent) error {
 	return func(e *core.RecordCreateEvent) error {
-		e.Record.Set("correct", checkGuess(app, e.Record))
+		e.Record.Set("correct", checkGuess(db, e.Record))
 		return nil
 	}
 }
 
-func createGuessCreatedHook(app *pocketbase.PocketBase, webhookURL string) func(e *core.RecordCreateEvent) error {
+func createGuessCreatedHook(db *daos.Dao, webhookURL string) func(e *core.RecordCreateEvent) error {
 	return func(e *core.RecordCreateEvent) error {
-		game, err := app.Dao().FindRecordById("games", e.Record.Get("game").(string))
+		game, err := db.FindRecordById("games", e.Record.Get("game").(string))
 		if err != nil {
 			return err
 		}
-		puzzle, err := app.Dao().FindRecordById("puzzles", e.Record.Get("puzzle").(string))
+		puzzle, err := db.FindRecordById("puzzles", e.Record.Get("puzzle").(string))
 		if err != nil {
 			return err
 		}
@@ -84,7 +84,7 @@ func createGuessCreatedHook(app *pocketbase.PocketBase, webhookURL string) func(
 			} else {
 				game.Set("puzzle", nextPuzzle)
 			}
-			return app.Dao().SaveRecord(game)
+			return db.SaveRecord(game)
 		}
 		return nil
 	}
