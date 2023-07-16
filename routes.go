@@ -131,29 +131,25 @@ func handleStartAdventure(db *daos.Dao, app core.App, webhookURL string) func(ec
 
 func handleStartGame(db *daos.Dao, webhookURL string) func(echo.Context) error {
 	return func(c echo.Context) error {
-		type req struct {
-			Code string `json:"game"`
+		game, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
+		if game == nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Game not found"})
 		}
-		var data = req{}
-		if err := c.Bind(&data); err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		if game.GetString("puzzle") != "" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Game already started"})
 		}
-		q := db.DB().NewQuery("UPDATE games SET status = 'ACTIVE', puzzle = (SELECT adventures.firstpuzzle FROM adventures WHERE adventures.id = games.adventure), start = datetime('now') WHERE username = {:username} AND status = 'PAID' AND (puzzle='' OR puzzle IS NULL);")
-		q = q.Bind(dbx.Params{"username": data.Code})
-		result, err := q.Execute()
+		adventure, err := db.FindFirstRecordByData("adventures", "id", game.Get("adventure"))
 		if err != nil {
-			fmt.Printf("%v\n", err)
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to start game 1"})
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to find first puzzle"})
 		}
-		rows, err := result.RowsAffected()
+		game.Set("status", "ACTIVE")
+		game.Set("puzzle", adventure.Get("firstpuzzle"))
+		game.Set("start", time.Now())
+		err = db.SaveRecord(game)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to start game 2"})
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to start game"})
 		}
-		if rows != 1 {
-			fmt.Printf("Rows: %d\n", rows)
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to start game 3"})
-		}
-		sendWebhook(webhookURL, fmt.Sprintf(":rocket: `%s` started", data.Code))
+		sendWebhook(webhookURL, fmt.Sprintf(":rocket: `%s` started", game.Get("username")))
 		return nil
 	}
 }
