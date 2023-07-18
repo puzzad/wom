@@ -23,14 +23,13 @@ func ConfigurePocketBase(app *pocketbase.PocketBase, db *daos.Dao, mailClient ma
 }
 
 func createEmailValidationLoginCheck(e *core.RecordAuthWithPasswordEvent) error {
-		if !e.Record.ValidatePassword(e.Password) {
-			return nil
-		}
-		if e.Record.Verified() {
-			return nil
-		}
-		return apis.NewBadRequestError("Email address pending validation.", nil)
+	if !e.Record.ValidatePassword(e.Password) {
+		return nil
 	}
+	if e.Record.Verified() {
+		return nil
+	}
+	return apis.NewBadRequestError("Email address pending validation.", nil)
 }
 
 func preserveOriginalFilenames(uploadedFiles map[string][]*filesystem.File, record *models.Record) error {
