@@ -3,6 +3,7 @@ package wom
 import (
 	"fmt"
 	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/daos"
 	"github.com/pocketbase/pocketbase/models"
@@ -18,6 +19,18 @@ func ConfigurePocketBase(app *pocketbase.PocketBase, db *daos.Dao, mailClient ma
 	app.OnRecordBeforeCreateRequest("adventures").Add(createPreserveFilenameCreateHook)
 	app.OnRecordBeforeCreateRequest("guesses").Add(createBeforeGuessCreatedHook(db))
 	app.OnRecordAfterCreateRequest("guesses").Add(createGuessCreatedHook(db, webhookURL))
+	app.OnRecordBeforeAuthWithPasswordRequest("users").Add(createEmailValidationLoginCheck)
+}
+
+func createEmailValidationLoginCheck(e *core.RecordAuthWithPasswordEvent) error {
+		if !e.Record.ValidatePassword(e.Password) {
+			return nil
+		}
+		if e.Record.Verified() {
+			return nil
+		}
+		return apis.NewBadRequestError("Email address pending validation.", nil)
+	}
 }
 
 func preserveOriginalFilenames(uploadedFiles map[string][]*filesystem.File, record *models.Record) error {
