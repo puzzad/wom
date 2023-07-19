@@ -10,6 +10,7 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pocketbase/pocketbase/tools/mailer"
+	"github.com/pocketbase/pocketbase/tools/security"
 	"strings"
 	"time"
 )
@@ -41,7 +42,7 @@ func createOauthSignupHook(db *daos.Dao) func(e *core.RecordAuthWithOAuth2Event)
 		if err != nil {
 			return err
 		}
-		err = record.SetPassword(e.OAuth2User.AccessToken)
+		err = record.SetPassword(security.RandomString(30))
 		if err != nil {
 			return err
 		}
