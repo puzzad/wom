@@ -10,6 +10,7 @@ import (
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase/mails"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/mailer"
 	"log"
@@ -24,8 +25,9 @@ var embedded embed.FS
 
 var siteFS = echo.MustSubFS(embedded, "site")
 
-func createWomRoutesHook(fso fileSystemOpener, db *daos.Dao, mailClient mailer.Mailer, webhookURL, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string) func(e *core.ServeEvent) error {
+func createWomRoutesHook(app core.App, fso fileSystemOpener, db *daos.Dao, mailClient mailer.Mailer, webhookURL, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string) func(e *core.ServeEvent) error {
 	return func(e *core.ServeEvent) error {
+		_ = e.Router.POST("/wom/signup", handleSignup(app, db, webhookURL))
 		_ = e.Router.POST("/wom/startadventure", handleStartAdventure(db, webhookURL))
 		_ = e.Router.POST("/wom/startgame", handleStartGame(db, webhookURL))
 		_ = e.Router.POST("/wom/importzip", handleAdventureImport(db, fso), apis.RequireAdminAuth())
@@ -37,6 +39,53 @@ func createWomRoutesHook(fso fileSystemOpener, db *daos.Dao, mailClient mailer.M
 		_ = e.Router.GET("/wom/unsubscribe/:token", handleUnsubscribe(db, mailClient, siteURL, senderName, senderAddress, mailingListSecret))
 		e.Router.GET("/*", apis.StaticDirectoryHandler(siteFS, true))
 		return nil
+	}
+}
+
+func handleSignup(app core.App, db *daos.Dao, webhookURL string) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		type req struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}
+		var data = req{}
+		if err := c.Bind(&data); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid request"})
+		}
+		if !validEmail(data.Email) {
+			return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid email"})
+		}
+		if !validPassword(data.Password) {
+			return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid password"})
+		}
+		if _, err := db.FindAuthRecordByEmail("users", data.Email); err == nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid email"})
+		}
+		users, err := db.FindCollectionByNameOrId("users")
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Unable to create user"})
+		}
+		record := models.NewRecord(users)
+		err = record.SetEmail(data.Email)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Unable to create user"})
+		}
+		err = record.SetPassword(data.Password)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Unable to create user"})
+		}
+		err = record.SetUsername(data.Email)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Unable to create user"})
+		}
+		if err = db.SaveRecord(record); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Unable to create user"})
+		}
+		if err = mails.SendRecordVerification(app, record); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Unable to create user"})
+		}
+		sendWebhook(webhookURL, fmt.Sprintf("New user signup: `%s`", record.Id))
+		return c.JSON(http.StatusOK, "User created")
 	}
 }
 

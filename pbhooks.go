@@ -14,7 +14,7 @@ import (
 )
 
 func ConfigurePocketBase(app *pocketbase.PocketBase, db *daos.Dao, mailClient mailer.Mailer, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret, webhookURL string) {
-	app.OnBeforeServe().Add(createWomRoutesHook(app, db, mailClient, webhookURL, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret))
+	app.OnBeforeServe().Add(createWomRoutesHook(app, app, db, mailClient, webhookURL, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret))
 	app.OnRecordBeforeUpdateRequest("adventures").Add(createPreserveFilenameUpdateHook)
 	app.OnRecordBeforeCreateRequest("adventures").Add(createPreserveFilenameCreateHook)
 	app.OnRecordBeforeCreateRequest("guesses").Add(createBeforeGuessCreatedHook(db))

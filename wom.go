@@ -7,6 +7,7 @@ import (
 	"github.com/pocketbase/pocketbase/daos"
 	"log"
 	"net/http"
+	"unicode"
 )
 
 func sendWebhook(webHookURL, message string) {
@@ -38,4 +39,24 @@ func checkGuess(db *daos.Dao, puzzleID, guess string) bool {
 		return false
 	}
 	return len(records) == 1
+}
+
+func validPassword(password string) bool {
+	var length, upperCase, lowerCase, number, special bool
+	if len(password) >= 8 {
+		length = true
+	}
+	for i := range password {
+		switch {
+		case unicode.IsUpper(rune(password[i])):
+			upperCase = true
+		case unicode.IsLower(rune(password[i])):
+			lowerCase = true
+		case unicode.IsNumber(rune(password[i])):
+			number = true
+		case unicode.IsPunct(rune(password[i])) || unicode.IsSymbol(rune(password[i])):
+			special = true
+		}
+	}
+	return length && upperCase && lowerCase && number && special
 }
