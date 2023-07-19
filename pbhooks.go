@@ -22,10 +22,10 @@ func ConfigurePocketBase(app *pocketbase.PocketBase, db *daos.Dao, mailClient ma
 	app.OnRecordBeforeCreateRequest("guesses").Add(createBeforeGuessCreatedHook(db))
 	app.OnRecordAfterCreateRequest("guesses").Add(createGuessCreatedHook(db, webhookURL))
 	app.OnRecordBeforeAuthWithPasswordRequest("users").Add(createEmailValidationLoginCheck)
-	app.OnRecordBeforeAuthWithOAuth2Request("users").Add(createOauthSignupHook(db))
+	app.OnRecordBeforeAuthWithOAuth2Request("users").Add(createOauthSignupHook(db, webhookURL))
 }
 
-func createOauthSignupHook(db *daos.Dao) func(e *core.RecordAuthWithOAuth2Event) error {
+func createOauthSignupHook(db *daos.Dao, webhookURL string) func(e *core.RecordAuthWithOAuth2Event) error {
 	return func(e *core.RecordAuthWithOAuth2Event) error {
 		if !validEmail(e.OAuth2User.Email) {
 			return errors.New("invalid email")
@@ -54,6 +54,7 @@ func createOauthSignupHook(db *daos.Dao) func(e *core.RecordAuthWithOAuth2Event)
 			return err
 		}
 		e.Record = record
+		sendWebhook(webhookURL, fmt.Sprintf("New user signup: `%s`", record.Id))
 		return nil
 	}
 }
