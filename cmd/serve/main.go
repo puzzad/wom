@@ -18,6 +18,7 @@ import (
 )
 
 var (
+	dev   = flag.Bool("production", true, "Is this a dev instance")
 	debug = flag.Bool("debug", false, "Enable debugging")
 
 	adminEmail    = flag.String("email", "", "Sets the initial admin email")
@@ -121,6 +122,7 @@ func main() {
 		*hcaptchaSiteKey,
 		*mailinglistSecretKey,
 		*webhookURL,
+		*dev,
 	)
 
 	serveCmd := cmd.NewServeCommand(app, false)

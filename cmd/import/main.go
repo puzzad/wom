@@ -12,17 +12,14 @@ import (
 )
 
 var (
-	filename   = flag.String("filename", "adventures.zip", "path to an adventures zip file")
-	production = flag.Bool("production", false, "Whether this is an upload to production or dev")
-	apiurl     = flag.String("apiurl", "http://localhost:8090/", "URL of the WOM instance")
-	email      = flag.String("email", "", "Admin email address")
-	password   = flag.String("password", "", "Admin password")
+	filename = flag.String("filename", "adventures.zip", "path to an adventures zip file")
+	apiurl   = flag.String("apiurl", "http://localhost:8090/", "URL of the WOM instance")
+	email    = flag.String("email", "", "Admin email address")
+	password = flag.String("password", "", "Admin password")
 )
 
 func main() {
 	envflag.Parse()
-
-	// TODO: Should probably use the production flag...
 
 	if err := uploadAdventures(*filename, *apiurl, *email, *password); err != nil {
 		log.Fatalf("Failed to upload: %v", err)

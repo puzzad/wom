@@ -25,12 +25,12 @@ var embedded embed.FS
 
 var siteFS = echo.MustSubFS(embedded, "site")
 
-func createWomRoutesHook(app core.App, fso fileSystemOpener, db *daos.Dao, mailClient mailer.Mailer, webhookURL, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string) func(e *core.ServeEvent) error {
+func createWomRoutesHook(app core.App, fso fileSystemOpener, db *daos.Dao, mailClient mailer.Mailer, webhookURL, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret string, dev bool) func(e *core.ServeEvent) error {
 	return func(e *core.ServeEvent) error {
 		_ = e.Router.POST("/wom/signup", handleSignup(app, db, webhookURL))
 		_ = e.Router.POST("/wom/startadventure", handleStartAdventure(db, webhookURL))
 		_ = e.Router.POST("/wom/startgame", handleStartGame(db, webhookURL))
-		_ = e.Router.POST("/wom/importzip", handleAdventureImport(db, fso), apis.RequireAdminAuth())
+		_ = e.Router.POST("/wom/importzip", handleAdventureImport(db, fso, dev), apis.RequireAdminAuth())
 		_ = e.Router.POST("/wom/requesthint", handleHintRequest(db, webhookURL))
 		_ = e.Router.GET("/wom/gethints", getHints(db))
 		_ = e.Router.POST("/wom/contact", handleContactForm(mailClient, contactEmail, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey))
@@ -237,7 +237,7 @@ func handleContactForm(mailClient mailer.Mailer, contactEmail, senderName, sende
 	}
 }
 
-func handleAdventureImport(db *daos.Dao, fso fileSystemOpener) func(c echo.Context) error {
+func handleAdventureImport(db *daos.Dao, fso fileSystemOpener, dev bool) func(c echo.Context) error {
 	return func(c echo.Context) error {
 		form, err := c.MultipartForm()
 		if err != nil {
@@ -255,7 +255,7 @@ func handleAdventureImport(db *daos.Dao, fso fileSystemOpener) func(c echo.Conte
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Unable to open zip"})
 		}
-		adventures := getAdventures(zipReader, false)
+		adventures := getAdventures(zipReader, dev)
 		updateAdventures(db, fso, adventures)
 		return c.JSON(http.StatusOK, nil)
 	}

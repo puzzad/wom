@@ -172,11 +172,11 @@ func updateAdventures(db *daos.Dao, fso fileSystemOpener, adventures []*adventur
 	}
 }
 
-func getAdventures(zfs fs.FS, prod bool) []*adventure {
+func getAdventures(zfs fs.FS, dev bool) []*adventure {
 	var adventures []*adventure
 	for _, f := range readDir(zfs, ".") {
 		if f.IsDir() {
-			checkedAdventure := checkAdventure(zfs, f.Name(), prod)
+			checkedAdventure := checkAdventure(zfs, f.Name(), dev)
 			if checkedAdventure != nil {
 				adventures = append(adventures, checkedAdventure)
 			}
@@ -185,7 +185,7 @@ func getAdventures(zfs fs.FS, prod bool) []*adventure {
 	return adventures
 }
 
-func checkAdventure(zfs fs.FS, name string, prod bool) *adventure {
+func checkAdventure(zfs fs.FS, name string, dev bool) *adventure {
 	if !exists(zfs, filepath.Join(name, "PRICE")) {
 		return nil
 	}
@@ -196,7 +196,7 @@ func checkAdventure(zfs fs.FS, name string, prod bool) *adventure {
 	devOnly := exists(zfs, filepath.Join(name, "DEVONLY"))
 	features := parseJsonFile(zfs, filepath.Join(name, "features.json"), &adventureFeatures{})
 
-	if devOnly && prod {
+	if devOnly && !dev {
 		return nil
 	}
 
