@@ -1,6 +1,7 @@
 package wom
 
 import (
+	"errors"
 	"fmt"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
@@ -20,8 +21,41 @@ func ConfigurePocketBase(app *pocketbase.PocketBase, db *daos.Dao, mailClient ma
 	app.OnRecordBeforeCreateRequest("guesses").Add(createBeforeGuessCreatedHook(db))
 	app.OnRecordAfterCreateRequest("guesses").Add(createGuessCreatedHook(db, webhookURL))
 	app.OnRecordBeforeAuthWithPasswordRequest("users").Add(createEmailValidationLoginCheck)
+	app.OnRecordBeforeAuthWithOAuth2Request("users").Add(createOauthSignupHook(db))
 }
 
+func createOauthSignupHook(db *daos.Dao) func(e *core.RecordAuthWithOAuth2Event) error {
+	return func(e *core.RecordAuthWithOAuth2Event) error {
+		if !validEmail(e.OAuth2User.Email) {
+			return errors.New("invalid email")
+		}
+		if _, err := db.FindAuthRecordByEmail("users", e.OAuth2User.Email); err == nil {
+			return nil
+		}
+		users, err := db.FindCollectionByNameOrId("users")
+		if err != nil {
+			return err
+		}
+		record := models.NewRecord(users)
+		err = record.SetEmail(e.OAuth2User.Email)
+		if err != nil {
+			return err
+		}
+		err = record.SetPassword(e.OAuth2User.AccessToken)
+		if err != nil {
+			return err
+		}
+		err = record.SetUsername(e.OAuth2User.Email)
+		if err != nil {
+			return err
+		}
+		if err = db.SaveRecord(record); err != nil {
+			return err
+		}
+		e.Record = record
+		return nil
+	}
+}
 func createEmailValidationLoginCheck(e *core.RecordAuthWithPasswordEvent) error {
 	if !e.Record.ValidatePassword(e.Password) {
 		return nil
