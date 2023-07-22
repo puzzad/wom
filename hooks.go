@@ -17,12 +17,23 @@ import (
 
 func ConfigurePocketBase(app *pocketbase.PocketBase, db *daos.Dao, mailClient mailer.Mailer, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret, webhookURL string, dev bool) {
 	app.OnBeforeServe().Add(createWomRoutesHook(app, app, db, mailClient, webhookURL, contactEmail, siteURL, senderName, senderAddress, hcaptchaSecretKey, hcaptchaSiteKey, mailingListSecret, dev))
-	app.OnRecordBeforeUpdateRequest("adventures").Add(createPreserveFilenameUpdateHook)
-	app.OnRecordBeforeCreateRequest("adventures").Add(createPreserveFilenameCreateHook)
+	app.OnRecordBeforeUpdateRequest("adventures").Add(preserveFilenameUpdateHook)
+	app.OnRecordBeforeCreateRequest("adventures").Add(preserveFilenameCreateHook)
 	app.OnRecordBeforeCreateRequest("guesses").Add(createBeforeGuessCreatedHook(db))
 	app.OnRecordAfterCreateRequest("guesses").Add(createGuessCreatedHook(db, webhookURL))
-	app.OnRecordBeforeAuthWithPasswordRequest("users").Add(createEmailValidationLoginCheck)
+	app.OnRecordBeforeAuthWithPasswordRequest("users").Add(emailValidationLoginCheck)
 	app.OnRecordBeforeAuthWithOAuth2Request("users").Add(createOauthSignupHook(db, webhookURL))
+
+	app.OnRecordBeforeAuthWithPasswordRequest().Add(rateLimitingPasswordHook)
+	app.OnRecordBeforeAuthWithOAuth2Request().Add(rateLimitingOAuthHook)
+}
+
+func rateLimitingPasswordHook(e *core.RecordAuthWithPasswordEvent) error {
+	return rateLimit(e.HttpContext.Request())
+}
+
+func rateLimitingOAuthHook(e *core.RecordAuthWithOAuth2Event) error {
+	return rateLimit(e.HttpContext.Request())
 }
 
 func createOauthSignupHook(db *daos.Dao, webhookURL string) func(e *core.RecordAuthWithOAuth2Event) error {
@@ -58,7 +69,7 @@ func createOauthSignupHook(db *daos.Dao, webhookURL string) func(e *core.RecordA
 		return nil
 	}
 }
-func createEmailValidationLoginCheck(e *core.RecordAuthWithPasswordEvent) error {
+func emailValidationLoginCheck(e *core.RecordAuthWithPasswordEvent) error {
 	if !e.Record.ValidatePassword(e.Password) {
 		return nil
 	}
@@ -141,10 +152,10 @@ func createGuessCreatedHook(db *daos.Dao, webhookURL string) func(e *core.Record
 	}
 }
 
-func createPreserveFilenameCreateHook(e *core.RecordCreateEvent) error {
+func preserveFilenameCreateHook(e *core.RecordCreateEvent) error {
 	return preserveOriginalFilenames(e.UploadedFiles, e.Record)
 }
 
-func createPreserveFilenameUpdateHook(e *core.RecordUpdateEvent) error {
+func preserveFilenameUpdateHook(e *core.RecordUpdateEvent) error {
 	return preserveOriginalFilenames(e.UploadedFiles, e.Record)
 }
