@@ -147,7 +147,7 @@ func handleStartAdventure(db *daos.Dao, webhookURL string) func(echo.Context) er
 		acaGen, err := aca.NewGenerator(".", rand.NewSource(time.Now().UnixNano()))
 		if err != nil {
 			log.Printf("Failed to create ACA generator: %v", err)
-			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to generate ACA"})
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to add adventure"})
 		}
 		code := acaGen.Generate()
 		record := models.NewRecord(collection)
@@ -156,10 +156,11 @@ func handleStartAdventure(db *daos.Dao, webhookURL string) func(echo.Context) er
 		record.Set("purchaser", user.Id)
 		record.Set("adventure", adventure.Id)
 		record.Set("username", code)
-		record.Set("password", "puzzad")
-		record.Set("passwordConfirm", "puzzad")
-		err = db.SaveRecord(record)
-		if err != nil {
+		if err := record.SetPassword("puzzad"); err != nil {
+			log.Printf("Failed to set password on new game: %v", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to add adventure"})
+		}
+		if err := db.SaveRecord(record); err != nil {
 			log.Printf("Failed to save adventure: %v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Unable to add adventure"})
 		}
