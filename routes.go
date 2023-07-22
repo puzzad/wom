@@ -152,7 +152,7 @@ func handleStartAdventure(db *daos.Dao, webhookURL string) func(echo.Context) er
 		record := models.NewRecord(collection)
 		record.RefreshId()
 		record.Set("status", "PAID")
-		record.Set("user", user.Id)
+		record.Set("purchaser", user.Id)
 		record.Set("adventure", adventure.Id)
 		record.Set("username", code)
 		record.Set("password", "puzzad")
