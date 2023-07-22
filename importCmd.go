@@ -220,7 +220,6 @@ func checkAdventure(zfs fs.FS, name string, dev bool) *adventure {
 		puzzles:     puzzles,
 		background:  readBinaryFile(zfs, filepath.Join(name, "background.jpg")),
 		logo:        readBinaryFile(zfs, filepath.Join(name, "logo.png")),
-		preview:     readBinaryFile(zfs, filepath.Join(name, "preview.png")),
 		features:    features,
 	}
 }
@@ -334,7 +333,6 @@ type adventure struct {
 	dev         bool
 	background  []byte
 	logo        []byte
-	preview     []byte
 	features    *adventureFeatures
 	puzzles     []puzzle
 }
