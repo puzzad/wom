@@ -1,0 +1,12 @@
+{{define "Title"}}Email Verification{{end}}
+{{define "LongerTitle"}}Confirm your email address{{end}}
+{{define "Body"}}
+<p>Before you can login you'll need to verify your email address</p>
+<p>Please click the button below to complete the verification</p>
+{{end}}
+{{define "Link"}}{ACTION_URL}{{end}}
+{{define "ButtonText"}}Confirm{{end}}
+
+{{template "common-header.gotpl" . }}
+{{template "common-body.gotpl" . }}
+{{template "common-footer.gotpl" . }}

@@ -15,6 +15,7 @@ import (
 	_ "github.com/puzzad/wom/migrations"
 	"github.com/spf13/cobra"
 	"log"
+	"strings"
 )
 
 var (
@@ -189,7 +190,11 @@ func UpdateAdmin(app *pocketbase.PocketBase, email, password string) error {
 
 func UpdateSettings(app *pocketbase.PocketBase) error {
 	form := forms.NewSettingsUpsert(app)
-	form.Meta.AppName = *siteName
+	if strings.HasSuffix(*siteName, "/") {
+		form.Meta.AppName = *siteName
+	} else {
+		form.Meta.AppName = fmt.Sprintf("%s/", *siteName)
+	}
 	form.Meta.AppUrl = *siteURL
 	form.Meta.HideControls = true
 	form.Logs.MaxDays = 90
@@ -219,11 +224,33 @@ func UpdateSettings(app *pocketbase.PocketBase) error {
 	form.TwitchAuth.ClientId = *twitchID
 	form.TwitchAuth.ClientSecret = *twitchSecret
 
+	//TODO: Add frontend endpoints for these so they fit in with the general site theme rather than point at pocketbase
+	template, err := wom.GetTemplates("changeemail", wom.TemplateData{})
+	if err != nil {
+		return err
+	}
+	form.Meta.ConfirmEmailChangeTemplate.Subject = "{APP_NAME}: Confirm email change"
+	form.Meta.ConfirmEmailChangeTemplate.ActionUrl = "{APP_URL}/_/#/auth/confirm-email-change/{TOKEN}"
+	form.Meta.ConfirmEmailChangeTemplate.Body = template
+	template, err = wom.GetTemplates("resetpassword", wom.TemplateData{})
+	if err != nil {
+		return err
+	}
+	form.Meta.ResetPasswordTemplate.Subject = "{APP_NAME}: Password reset"
+	form.Meta.ConfirmEmailChangeTemplate.ActionUrl = "{APP_URL}/_/#/auth/confirm-password-reset/{TOKEN}"
+	form.Meta.ResetPasswordTemplate.Body = template
+	template, err = wom.GetTemplates("verification", wom.TemplateData{})
+	if err != nil {
+		return err
+	}
+	form.Meta.VerificationTemplate.Subject = "{APP_NAME}: Email Verification"
+	form.Meta.ConfirmEmailChangeTemplate.ActionUrl = "{APP_URL}/_/#/auth/confirm-verification/{TOKEN}"
+	form.Meta.VerificationTemplate.Body = template
 	return form.Submit()
 }
 
 func contains[T comparable](s []T, e T) bool {
-	// TODO: Remove in go 1.21
+	//TODO: Remove in go 1.21
 	for _, v := range s {
 		if v == e {
 			return true

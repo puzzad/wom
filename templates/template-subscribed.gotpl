@@ -1,0 +1,20 @@
+{{define "Title"}}Subscription{{end}}
+{{define "LongerTitle"}}Your subscription is confirmed{{end}}
+{{define "Body"}}
+<p>Hello,</p>
+<p>You have now subscribed to the Puzzad.com mailing list. This is a low-volume list used to post major announcements about Puzzad.com.</p>
+<p>You can unsubscribe at any time using the link in the footer of any e-mail.</p>
+{{end}}
+{{define "Link"}}{{.SiteURL}}/wom/unsubscribe/{{.Token}}{{end}}
+{{define "ButtonBlock"}}{{""}}{{end}}
+{{define "AdditionalFooter"}}
+<td style="padding: 20px; font-family: sans-serif; font-size: 12px; line-height: 15px; text-align: center; color: #ffffff;">
+    You are receiving this mail because you signed up to the Puzzad.com mailing list. You may
+    <a href="{{block "Link" .}}{{end}}" style="color: #ffffff; text-decoration: underline;">unsubscribe</a>
+    at any time.
+</td>
+{{end}}
+
+{{template "common-header.gotpl" . }}
+{{template "common-body.gotpl" . }}
+{{template "common-footer.gotpl" . }}

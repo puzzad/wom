@@ -1,0 +1,13 @@
+{{define "Title"}}Confirm email change{{end}}
+{{define "LongerTitle"}}Someone has requested a change of email{{end}}
+{{define "Body"}}
+<p>Hello,</p>
+<p>Click the link below to confirm your new email address</p>
+<p>If this wasn't you, no action is required</p>
+{{end}}
+{{define "Link"}}{ACTION_URL}{{end}}
+{{define "ButtonText"}}Confirm email{{end}}
+
+{{template "common-header.gotpl" . }}
+{{template "common-body.gotpl" . }}
+{{template "common-footer.gotpl" . }}

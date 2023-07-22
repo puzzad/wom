@@ -2,19 +2,23 @@ package wom
 
 import (
 	"bytes"
+	"embed"
 	"fmt"
+	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase/daos"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/mailer"
 	htemplate "html/template"
 	"net/mail"
-	"path/filepath"
 	"strings"
-	ttemplate "text/template"
 )
 
+//go:embed templates
+var templates embed.FS
+var templateFS = echo.MustSubFS(templates, "templates")
+
 func SendContactFormMail(mailClient mailer.Mailer, contactEmail, senderName, senderAddress, email string, name string, content string) error {
-	text, html, err := getTemplates("subscribed", templateData{
+	html, err := GetTemplates("contact", TemplateData{
 		Name:    name,
 		Email:   email,
 		Message: content,
@@ -34,7 +38,6 @@ func SendContactFormMail(mailClient mailer.Mailer, contactEmail, senderName, sen
 			"Reply-To": email,
 		},
 		Subject: "Contact Form",
-		Text:    text,
 		HTML:    html,
 	}
 	return mailClient.Send(message)
@@ -45,8 +48,9 @@ func sendSubscriptionConfirmedMail(mailClient mailer.Mailer, siteURL, senderName
 	if err != nil {
 		return err
 	}
-	text, html, err := getTemplates("subscribed", templateData{
-		Link: fmt.Sprintf("%s/mail/unsubscribe/%s", siteURL, token),
+	html, err := GetTemplates("subscribed", TemplateData{
+		SiteURL: siteURL,
+		Token:   token,
 	})
 	if err != nil {
 		return err
@@ -60,15 +64,20 @@ func sendSubscriptionConfirmedMail(mailClient mailer.Mailer, siteURL, senderName
 			Address: email,
 		}},
 		Subject: "Mailinglist Confirmed",
-		Text:    text,
 		HTML:    html,
 	}
 	return mailClient.Send(message)
 }
 
-func sendSubscriptionUnsubscribedMail(mailClient mailer.Mailer, siteURL, senderName, senderAddress, email string) error {
-	text, html, err := getTemplates("unsubscribed", templateData{
-		Link: fmt.Sprintf("%s/mail/subscribe", siteURL),
+func sendSubscriptionUnsubscribedMail(mailClient mailer.Mailer, siteURL, senderName, senderAddress, mailingListSecret, email string) error {
+	token, err := createSubscriptionJwt(mailingListSecret, email)
+	if err != nil {
+		fmt.Printf("Error creating subscription JWT: %s", err)
+		return err
+	}
+	html, err := GetTemplates("unsubscribed", TemplateData{
+		SiteURL: siteURL,
+		Token:   token,
 	})
 	if err != nil {
 		return err
@@ -82,7 +91,6 @@ func sendSubscriptionUnsubscribedMail(mailClient mailer.Mailer, siteURL, senderN
 			Address: email,
 		}},
 		Subject: "Mailinglist Unsubscribed",
-		Text:    text,
 		HTML:    html,
 	}
 	return mailClient.Send(message)
@@ -94,8 +102,9 @@ func sendSubscriptionOptInMail(mailClient mailer.Mailer, siteURL, senderName, se
 		fmt.Printf("Error creating subscription JWT: %s", err)
 		return err
 	}
-	text, html, err := getTemplates("optin", templateData{
-		Link: fmt.Sprintf("%s/mail/confirm/%s", token, siteURL),
+	html, err := GetTemplates("optin", TemplateData{
+		Token:   token,
+		SiteURL: siteURL,
 	})
 	message := &mailer.Message{
 		From: mail.Address{
@@ -106,7 +115,6 @@ func sendSubscriptionOptInMail(mailClient mailer.Mailer, siteURL, senderName, se
 			Address: email,
 		}},
 		Subject: "Mailinglist Opt-In",
-		Text:    text,
 		HTML:    html,
 	}
 	return mailClient.Send(message)
@@ -117,10 +125,7 @@ func addEmailToMailingList(db *daos.Dao, email string) error {
 	if err != nil {
 		return err
 	}
-	existing, err := db.FindFirstRecordByData("mailinglist", "email", email)
-	if err != nil {
-		return err
-	}
+	existing, _ := db.FindFirstRecordByData("mailinglist", "email", email)
 	if existing != nil {
 		return nil
 	}
@@ -143,32 +148,24 @@ func validEmail(email string) bool {
 	return err == nil && !strings.Contains(email, " ")
 }
 
-type templateData struct {
+type TemplateData struct {
 	Name    string
 	Email   string
 	Message string
-	Link    string
+	Token   string
+	SiteURL string
 }
 
-func getTemplates(template string, data templateData) (string, string, error) {
-	tt, err := ttemplate.ParseFiles(filepath.Join("templates", fmt.Sprintf("%s.txt.gotpl", template)))
+func GetTemplates(template string, data TemplateData) (string, error) {
+	templateName := fmt.Sprintf("template-%s.gotpl", template)
+	parsedTemplates, err := htemplate.ParseFS(templateFS, "common-*.gotpl", templateName)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
-
-	ht, err := htemplate.ParseFiles(filepath.Join("templates", fmt.Sprintf("%s.html.gotpl", template)))
-	if err != nil {
-		return "", "", err
-	}
-
-	twr := &bytes.Buffer{}
-	if err = tt.Execute(twr, data); err != nil {
-		return "", "", err
-	}
-
 	hwr := &bytes.Buffer{}
-	if err = ht.Execute(hwr, data); err != nil {
-		return "", "", err
+	err = parsedTemplates.ExecuteTemplate(hwr, templateName, data)
+	if err != nil {
+		return "", err
 	}
-	return twr.String(), hwr.String(), nil
+	return hwr.String(), nil
 }

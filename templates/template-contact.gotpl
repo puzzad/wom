@@ -1,0 +1,11 @@
+{{define "Title"}}Contact form{{end}}
+{{define "LongerTitle"}}The below message was submitted on the contact form{{end}}
+{{define "Body"}}
+<p>Name: {{.Name}} ({{.Email}})</p>
+<p>{{.Message}}</p>
+{{end}}
+{{define "ButtonBlock"}}{{""}}{{end}}
+
+{{template "common-header.gotpl" . }}
+{{template "common-body.gotpl" . }}
+{{template "common-footer.gotpl" . }}

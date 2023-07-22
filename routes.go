@@ -193,6 +193,7 @@ func handleStartGame(db *daos.Dao, webhookURL string) func(echo.Context) error {
 		game.Set("status", "ACTIVE")
 		game.Set("puzzle", adventure.Get("firstpuzzle"))
 		game.Set("start", time.Now())
+		game.Set("verified", true)
 		err = db.SaveRecord(game)
 		if err != nil {
 			log.Printf("Unable to start game: %v", err)
@@ -344,9 +345,11 @@ func handleSubscribe(db *daos.Dao, mailClient mailer.Mailer, siteURL, senderName
 			return c.JSON(http.StatusOK, map[string]bool{"NeedConfirm": true})
 		}
 		if err := addEmailToMailingList(db, data.Email); err != nil {
+			fmt.Printf("Error adding to mailing list: %s", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Error adding you to the mailing list"})
 		}
 		if err := sendSubscriptionConfirmedMail(mailClient, siteURL, senderName, senderAddress, mailingListSecret, data.Email); err != nil {
+			fmt.Printf("%s\n", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Error sending the confirmation email"})
 		}
 		return c.JSON(http.StatusOK, map[string]bool{"NeedConfirm": false})
@@ -392,7 +395,7 @@ func handleUnsubscribe(db *daos.Dao, mailClient mailer.Mailer, siteURL, senderNa
 		if err := removeEmailToMailingList(db, email); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
 		}
-		if err := sendSubscriptionUnsubscribedMail(mailClient, siteURL, senderName, senderAddress, email); err != nil {
+		if err := sendSubscriptionUnsubscribedMail(mailClient, siteURL, senderName, senderAddress, mailingListSecret, email); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal error"})
 		}
 		return c.NoContent(http.StatusNoContent)

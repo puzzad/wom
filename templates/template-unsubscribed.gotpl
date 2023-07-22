@@ -1,0 +1,17 @@
+{{define "Title"}}Unsubscribe{{end}}
+{{define "LongerTitle"}}Your subscription has been removed{{end}}
+{{define "Body"}}
+<p>Hello,</p>
+<p>This is to inform you that you have been removed from the Puzzad.com mailing
+list and will no longer receive announcements from us.
+</p>
+<p>
+    In case this was in error, you can resubscribe below:
+</p>
+{{end}}
+{{define "Link"}}{{.SiteURL}}/_/#/auth/confirm-email/{{.Token}}{{end}}
+{{define "ButtonText"}}Confirm{{end}}
+
+{{template "common-header.gotpl" . }}
+{{template "common-body.gotpl" . }}
+{{template "common-footer.gotpl" . }}

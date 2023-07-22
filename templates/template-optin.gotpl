@@ -1,0 +1,12 @@
+{{define "Title"}}Subscription confirm{{end}}
+{{define "LongerTitle"}}Confirm your mailing list subscription{{end}}
+{{define "Body"}}
+<p>Please click the button below to confirm you want to join our newsletter</p>
+<p>Any emails we send will have an unsubscribe link in the footer.</p>
+{{end}}
+{{define "Link"}}{{.SiteURL}}/wom/confirm/{{.Token}}{{end}}
+{{define "ButtonText"}}Confirm{{end}}
+
+{{template "common-header.gotpl" . }}
+{{template "common-body.gotpl" . }}
+{{template "common-footer.gotpl" . }}
