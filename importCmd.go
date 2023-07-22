@@ -238,9 +238,9 @@ func checkPuzzle(zfs fs.FS, folder string) puzzle {
 		hintParts := strings.SplitN(h, ": ", 2)
 		hints = append(hints, [2]string{hintParts[0], hintParts[1]})
 	}
-	content := replaceVariables(zfs, readTextFile(zfs, filepath.Join(folder, "puzzle.html")), folder)
-	story := replaceVariables(zfs, readTextFile(zfs, filepath.Join(folder, "story.html")), folder)
-	information := replaceVariables(zfs, readTextFile(zfs, filepath.Join(folder, "information.html")), folder)
+	content := readFileWithSubstitution(zfs, filepath.Join(folder, "puzzle.html"))
+	story := readFileWithSubstitution(zfs, filepath.Join(folder, "story.html"))
+	information := readFileWithSubstitution(zfs, filepath.Join(folder, "information.html"))
 
 	return puzzle{
 		order:   number,
@@ -252,6 +252,19 @@ func checkPuzzle(zfs fs.FS, folder string) puzzle {
 		answers: answers,
 		hints:   hints,
 		files:   nil,
+	}
+}
+
+func fileExists(zfs fs.FS, path string) bool {
+	_, err := fs.Stat(zfs, path)
+	return err == nil
+}
+
+func readFileWithSubstitution(zfs fs.FS, path string) string {
+	if fileExists(zfs, path) {
+		return replaceVariables(zfs, readTextFile(zfs, path), filepath.Dir(path))
+	} else {
+		return ""
 	}
 }
 
