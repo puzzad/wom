@@ -74,7 +74,7 @@ func main() {
 	envflag.Parse()
 	checkRequiredFlags()
 
-	app := pocketbase.NewWithConfig(&pocketbase.Config{
+	app := pocketbase.NewWithConfig(pocketbase.Config{
 		DefaultDataDir: *dataDirectory,
 		DefaultDebug:   *debug,
 	})
@@ -157,7 +157,7 @@ func checkRequiredFlags() {
 
 func runMigrationCommand(app core.App, subcommand string) error {
 	blankCommand := &cobra.Command{}
-	migratecmd.MustRegister(app, blankCommand, &migratecmd.Options{Automigrate: *autoMigrate})
+	migratecmd.MustRegister(app, blankCommand, migratecmd.Config{Automigrate: *autoMigrate})
 	blankCommand.SetArgs([]string{"migrate", subcommand})
 	return blankCommand.Execute()
 }
