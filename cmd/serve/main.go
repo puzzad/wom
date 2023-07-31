@@ -15,7 +15,6 @@ import (
 	_ "github.com/puzzad/wom/v2/migrations"
 	"github.com/spf13/cobra"
 	"log"
-	"strings"
 )
 
 var (
