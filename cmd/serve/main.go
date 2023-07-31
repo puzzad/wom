@@ -190,11 +190,7 @@ func UpdateAdmin(app *pocketbase.PocketBase, email, password string) error {
 
 func UpdateSettings(app *pocketbase.PocketBase) error {
 	form := forms.NewSettingsUpsert(app)
-	if strings.HasSuffix(*siteName, "/") {
-		form.Meta.AppName = *siteName
-	} else {
-		form.Meta.AppName = fmt.Sprintf("%s/", *siteName)
-	}
+	form.Meta.AppName = *siteName
 	form.Meta.AppUrl = *siteURL
 	form.Meta.HideControls = true
 	form.Logs.MaxDays = 90
