@@ -1,4 +1,4 @@
-module github.com/puzzad/wom
+module github.com/puzzad/wom/v2
 
 go 1.20
 
