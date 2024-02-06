@@ -75,7 +75,7 @@ func main() {
 
 	app := pocketbase.NewWithConfig(pocketbase.Config{
 		DefaultDataDir: *dataDirectory,
-		DefaultDebug:   *debug,
+		DefaultDev:     *debug,
 	})
 
 	if err := app.Bootstrap(); err != nil {
