@@ -1,8 +1,6 @@
 module github.com/puzzad/wom/v2
 
-go 1.21
-
-toolchain go1.21.6
+go 1.23
 
 require (
 	github.com/csmith/aca v1.1.0
