@@ -6,7 +6,7 @@ require (
 	github.com/csmith/aca v1.1.0
 	github.com/csmith/envflag v1.0.0
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
-	github.com/go-resty/resty/v2 v2.16.1
+	github.com/go-resty/resty/v2 v2.16.2
 	github.com/golang-jwt/jwt/v4 v4.5.1
 	github.com/labstack/echo/v5 v5.0.0-20230722203903-ec5b858dab61
 	github.com/pocketbase/dbx v1.10.1
