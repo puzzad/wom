@@ -1,9 +1,9 @@
 module github.com/puzzad/wom/v2
 
-go 1.23
+go 1.24.4
 
 require (
-	github.com/csmith/aca v1.1.0
+	github.com/csmith/aca v1.2.0
 	github.com/csmith/envflag v1.0.0
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/go-resty/resty/v2 v2.16.2
